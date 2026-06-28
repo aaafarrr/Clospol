@@ -3,9 +3,10 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat python3 make g++ gcc
 WORKDIR /app
 
-# Copy package files
+# Copy package files and prisma schema
 COPY package*.json ./
-RUN npm ci
+COPY prisma ./prisma
+RUN npm ci && npx prisma generate
 
 # Stage 2: Build the application
 FROM node:20-alpine AS builder
@@ -16,9 +17,6 @@ COPY . .
 # Build-time environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build Next.js application
 RUN npm run build
