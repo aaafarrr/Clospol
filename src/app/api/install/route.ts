@@ -30,7 +30,6 @@ export async function POST(req: NextRequest) {
     envUpdates.GOOGLE_DRIVE_ROOT_FOLDER = env.GOOGLE_DRIVE_ROOT_FOLDER || "clospol";
     envUpdates.S3_PREFIX = env.S3_PREFIX || "clospol";
     envUpdates.MAX_UPLOAD_BYTES = env.MAX_UPLOAD_BYTES || "5368709120"; // 5GB
-    envUpdates.GITHUB_REPO = env.GITHUB_REPO || "aaafarrr/Clospol";
     envUpdates.RECAPTCHA_SECRET_KEY = env.RECAPTCHA_SECRET_KEY || "";
     envUpdates.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     envUpdates.TZ = env.TZ || "Asia/Jakarta";
