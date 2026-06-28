@@ -1,0 +1,793 @@
+/* Compiled Preline CSS Variants */
+/* Preline */
+
+/* Source: ./src/plugins/dropdown/variants.css */
+@custom-variant hs-dropdown-open {
+  &.hs-dropdown-menu.open {
+    @slot;
+  }
+
+  .hs-dropdown.open>& {
+    @slot;
+  }
+
+  .hs-dropdown.open>.hs-dropdown-toggle & {
+    @slot;
+  }
+
+  .hs-dropdown.open>.hs-dropdown-menu>& {
+    @slot;
+  }
+}
+
+@custom-variant hs-dropdown-item-disabled {
+  .hs-dropdown.open>.hs-dropdown-menu &.disabled {
+    @slot;
+  }
+}
+
+@custom-variant hs-dropdown-item-checked {
+  .hs-dropdown.open .hs-dropdown-menu [aria-checked='true'] & {
+    @slot;
+  }
+
+  .hs-dropdown.open .hs-dropdown-menu &[aria-checked='true'] {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/remove-element/variants.css */
+@custom-variant hs-removing {
+  &.hs-removing {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/tooltip/variants.css */
+@custom-variant hs-tooltip-shown {
+  &.hs-tooltip-content.show {
+    @slot;
+  }
+
+  .hs-tooltip.show & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/accordion/variants.css */
+@custom-variant hs-accordion-active {
+  &.hs-accordion.active {
+    @slot;
+  }
+
+  .hs-accordion.active>& {
+    @slot;
+  }
+
+  .hs-accordion.active>.hs-accordion-toggle & {
+    @slot;
+  }
+
+  .hs-accordion.active>.hs-accordion-heading>.hs-accordion-toggle & {
+    @slot;
+  }
+
+  &.hs-accordion-toggle {
+
+    .hs-accordion.active>& {
+      @slot;
+    }
+  }
+
+  &.hs-accordion-toggle {
+
+    .hs-accordion.active>.hs-accordion-heading>& {
+      @slot;
+    }
+  }
+
+  &.hs-accordion-force-active {
+    .hs-accordion.active & {
+      @slot;
+    }
+  }
+}
+
+@custom-variant hs-accordion-selected {
+  &.selected {
+    .hs-accordion & {
+      @slot;
+    }
+  }
+}
+
+@custom-variant hs-accordion-outside-active {
+  &.active {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/tree-view/variants.css */
+@custom-variant hs-tree-view-selected {
+
+  &[data-hs-tree-view-item].selected {
+    @slot;
+  }
+
+  [data-hs-tree-view-item].selected>& {
+    @slot;
+  }
+}
+
+@custom-variant hs-tree-view-disabled {
+
+  &[data-hs-tree-view-item].disabled {
+    @slot;
+  }
+
+  [data-hs-tree-view-item].disabled>& {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/collapse/variants.css */
+@custom-variant hs-collapse-open {
+
+  &.hs-collapse.open {
+    @slot;
+  }
+
+  &.hs-collapse-toggle.open {
+    @slot;
+  }
+
+  .hs-collapse.open & {
+    @slot;
+  }
+
+  .hs-collapse-toggle.open & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/tabs/variants.css */
+@custom-variant hs-tab-active {
+
+  &[data-hs-tab].active {
+    @slot;
+  }
+
+  [data-hs-tab].active & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/overlay/variants.css */
+@custom-variant hs-overlay-open {
+
+  &.open {
+    @slot;
+  }
+
+  .open & {
+    @slot;
+  }
+}
+
+@custom-variant hs-overlay-layout-open {
+
+  &.hs-overlay-body-open {
+    @slot;
+  }
+
+  .hs-overlay-body-open & {
+    @slot;
+  }
+}
+
+@custom-variant hs-overlay-minified {
+
+  &.minified {
+    @slot;
+  }
+
+  .minified & {
+    @slot;
+  }
+
+  .hs-overlay-minified & {
+    @slot;
+  }
+}
+
+@custom-variant hs-overlay-backdrop-open {
+
+  &.hs-overlay-backdrop {
+    @slot;
+  }
+
+  .hs-overlay-backdrop & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/scrollspy/variants.css */
+@custom-variant hs-scrollspy-active {
+  &.active {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/carousel/variants.css */
+@custom-variant hs-carousel-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-carousel-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-carousel-dragging {
+
+  &.dragging {
+    @slot;
+  }
+
+  .dragging & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/select/variants.css */
+@custom-variant hs-selected {
+
+  &.selected {
+    @slot;
+  }
+
+  .selected & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-opened {
+  &.opened {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/input-number/variants.css */
+@custom-variant hs-input-number-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/pin-input/variants.css */
+@custom-variant hs-pin-input-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/strong-password/variants.css */
+@custom-variant hs-password-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password {
+
+  &.passed {
+    @slot;
+  }
+
+  .passed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password-accepted {
+
+  &.accepted {
+    @slot;
+  }
+
+  .accepted & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password-active {
+  &.active {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/stepper/variants.css */
+@custom-variant hs-stepper-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-success {
+
+  &.success {
+    @slot;
+  }
+
+  .success & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-completed {
+
+  &.completed {
+    @slot;
+  }
+
+  .completed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-error {
+
+  &.error {
+    @slot;
+  }
+
+  .error & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-processed {
+
+  &.processed {
+    @slot;
+  }
+
+  .processed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-skipped {
+
+  &.skipped {
+    @slot;
+  }
+
+  .skipped & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/combobox/variants.css */
+@custom-variant hs-combo-box-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-has-value {
+
+  &.has-value {
+    @slot;
+  }
+
+  .has-value & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-selected {
+
+  &.selected {
+    @slot;
+  }
+
+  .selected & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-tab-active {
+  &.active {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/layout-splitter/variants.css */
+@custom-variant hs-layout-splitter-dragging {
+
+  &.dragging {
+    @slot;
+  }
+
+  .dragging & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-prev-limit-reached {
+
+  &.prev-limit-reached {
+    @slot;
+  }
+
+  .prev-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-next-limit-reached {
+
+  &.next-limit-reached {
+    @slot;
+  }
+
+  .next-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-prev-pre-limit-reached {
+
+  &.prev-pre-limit-reached {
+    @slot;
+  }
+
+  .prev-pre-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-next-pre-limit-reached {
+
+  &.next-pre-limit-reached {
+    @slot;
+  }
+
+  .next-pre-limit-reached & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/scroll-nav/variants.css */
+@custom-variant hs-scroll-nav-active {
+
+  &.active {
+    @slot;
+  }
+}
+
+@custom-variant hs-scroll-nav-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/datatable/variants.css */
+@custom-variant hs-datatable-ordering-asc {
+
+  &.dt-ordering-asc {
+    @slot;
+  }
+
+  .dt-ordering-asc & {
+    @slot;
+  }
+}
+
+@custom-variant hs-datatable-ordering-desc {
+
+  &.dt-ordering-desc {
+    @slot;
+  }
+
+  .dt-ordering-desc & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/range-slider/variants.css */
+@custom-variant hs-range-slider-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/file-upload/variants.css */
+@custom-variant hs-file-upload-complete {
+
+  &.complete {
+    @slot;
+  }
+
+  .complete & {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/datepicker/variants.css */
+@custom-variant hs-vc-date-today {
+  &[data-vc-date-today] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover {
+  &[data-vc-date-hover] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover-first {
+
+  &[data-vc-date-hover='first'] {
+    @slot;
+  }
+
+  [data-vc-date-hover='first'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover-last {
+
+  &[data-vc-date-hover='last'] {
+    @slot;
+  }
+
+  [data-vc-date-hover='last'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-selected {
+  &[data-vc-date-selected] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-middle {
+
+  &[data-vc-date-selected='middle'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='middle'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-first {
+
+  &[data-vc-date-selected='first'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='first'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-last {
+
+  &[data-vc-date-selected='last'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='last'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-weekend {
+  &[data-vc-date-weekend] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-week-day-off {
+  &[data-vc-week-day-off] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-month-prev {
+  &[data-vc-date-month='prev'] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-month-next {
+  &[data-vc-date-month='next'] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-hidden {
+
+  &[data-vc-calendar-hidden] {
+    @slot;
+  }
+
+  [data-vc-calendar-hidden] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-months-month-selected {
+  &[data-vc-months-month-selected] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-years-year-selected {
+  &[data-vc-years-year-selected] {
+    @slot;
+  }
+}
+
+/* Source: ./src/plugins/theme-switch/variants.css */
+@custom-variant hs-default-mode-active {
+  .default & {
+    @slot;
+  }
+}
+
+@custom-variant hs-light-mode-active {
+  .light:not(.auto) & {
+    @slot;
+  }
+}
+
+@custom-variant hs-dark-mode-active {
+  .dark:not(.auto) & {
+    @slot;
+  }
+}
+
+@custom-variant hs-auto-mode-active {
+  .auto & {
+    @slot;
+  }
+}
+
+@custom-variant hs-auto-dark-mode-active {
+  .auto.dark & {
+    @slot;
+  }
+}
+
+@custom-variant hs-auto-light-mode-active {
+  .auto.light & {
+    @slot;
+  }
+}
+/* States */
+@custom-variant hs-success {
+&.success {
+@slot;
+}
+.success & {
+@slot;
+}
+}
+@custom-variant hs-error {
+&.error {
+@slot;
+}
+.error & {
+@slot;
+}
+}
+/* Apexcharts */
+@custom-variant hs-apexcharts-tooltip-dark {
+&.dark {
+@slot;
+}
+}
+/* Sortable.js */
+@custom-variant hs-dragged {
+&.dragged {
+@slot;
+}
+}
+/* Toastify */
+@custom-variant hs-toastify-on {
+&.toastify.on {
+@slot;
+}
+.toastify.on & {
+@slot;
+}
+}

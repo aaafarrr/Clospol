@@ -1,0 +1,56 @@
+{
+  "name": "clospol-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1072.0",
+    "@aws-sdk/lib-storage": "^3.1072.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@fortawesome/fontawesome-free": "^7.2.0",
+    "@prisma/client": "^7.8.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "adm-zip": "^0.5.17",
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^12.11.1",
+    "discord.js": "^14.26.4",
+    "drizzle-orm": "^0.45.2",
+    "googleapis": "^173.0.0",
+    "hls.js": "^1.6.16",
+    "lucide-react": "^1.21.0",
+    "next": "16.2.9",
+    "node-cron": "^4.4.1",
+    "pino": "^10.3.1",
+    "preline": "^4.2.0",
+    "qrcode": "^1.5.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/adm-zip": "^0.5.8",
+    "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4",
+    "ts-morph": "^28.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "undici": "^6.27.0"
+  }
+}

@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+@variant dark (&:where(.dark, .dark *));
+@source "../../node_modules/preline/dist/*.js";
+@import "./preline-variants.css";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --font-sans: 'Outfit', sans-serif;
+}
+
+html.dark {
+  --background: #090d16;
+  --foreground: #f1f5f9;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Preline UI panel helper */
+.glass-panel {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+html.dark .glass-panel {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+.glass-panel-hover {
+  transition: all 0.15s ease-in-out;
+}
+
+.glass-panel-hover:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+html.dark .glass-panel-hover:hover {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+/* Preline UI input helper */
+.glass-input {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  color: #0f172a;
+  transition: all 0.15s ease-in-out;
+  outline: none;
+}
+
+html.dark .glass-input {
+  background-color: #020617;
+  border-color: #1e293b;
+  color: #f1f5f9;
+}
+
+html.dark input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.glass-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+/* Custom Scrollbars (Preline Style) */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Fallback spot elements disabled/transparent */
+.glow-spot {
+  display: none;
+}
