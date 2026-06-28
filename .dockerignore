@@ -21,7 +21,6 @@ yarn-error.log*
 next-env.d.ts
 Dockerfile
 docker-compose.yml
-entrypoint.sh
 README.md
 walkthrough.md
 task.md
