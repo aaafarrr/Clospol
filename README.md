@@ -1,6 +1,6 @@
 # Clospol
 
-![Clospol Storage Gateway Preview](public/screenshots/clospol.jpg)
+![Clospol Storage Gateway Preview](public/screenshots/clospol.png)
 
 **Clospol** (short for **Cloud Storage Pool**) is a modern, high-performance, and secure **Multi-Cloud Storage Gateway**. It unifies diverse storage environments (Google Drive, Microsoft OneDrive, Dropbox, AWS S3 / compatible object storage like MinIO, Cloudflare R2, Backblaze B2, and physical local paths) into a single workspace, enabling seamless access control, data synchronization, backup automation, media stream management, and automation bots.
 
