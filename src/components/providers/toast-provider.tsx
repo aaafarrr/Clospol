@@ -27,10 +27,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, type, message }]);
     
-    // Auto-remove after 4 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    // Auto-remove success/info after 4 seconds.
+    // Important notifications (error/warning) persist until clicked.
+    if (type === "success" || type === "info") {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    }
   }, []);
 
   const removeToast = useCallback((id: string) => {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface ApiKeyItem {
   id: string;
@@ -17,7 +18,7 @@ interface ApiKeyItem {
 export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [secretKey, setSecretKey] = useState<string | null>(null);
 
   // Copy Feedback States
@@ -134,9 +135,9 @@ export default function ApiKeysPage() {
       setIsModalOpen(false);
       setSecretKey(data.secret);
       loadKeys();
-      setAlertMessage("API Key generated successfully. Please copy the secret key below.");
+      toast.success("API Key generated successfully. Please copy the secret key below.");
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message || "Failed to create API key.");
     } finally {
       setCreateLoading(false);
     }
@@ -178,9 +179,9 @@ export default function ApiKeysPage() {
       if (!res.ok) throw new Error("Revocation failed");
 
       loadKeys();
-      setAlertMessage("API Key revoked.");
+      toast.success("API Key revoked successfully.");
     } catch (err) {
-      window.alert("Failed to revoke key.");
+      toast.error("Failed to revoke key.");
     }
   };
 
@@ -708,18 +709,7 @@ console.log('Delete status:', data.status);`,
           </div>
         </div>
 
-        {/* Alert Messaging */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between shadow-sm animate-fade-in">
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* One-Time Secret Display Card */}
         {secretKey && (
@@ -780,7 +770,6 @@ console.log('Delete status:', data.status);`,
                 <button
                   onClick={() => {
                     setSecretKey(null);
-                    setAlertMessage(null);
                   }}
                   className="h-11 px-4 border border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
                 >

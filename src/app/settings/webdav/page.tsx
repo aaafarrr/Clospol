@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 export default function WebDAVAccessPage() {
   if (process.env.NEXT_PUBLIC_FEATURE_WEBDAV === "false") {
@@ -21,7 +22,7 @@ export default function WebDAVAccessPage() {
   }
 
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [webdavOs, setWebdavOs] = useState<"win" | "mac" | "linux">("win");
 
@@ -56,18 +57,7 @@ export default function WebDAVAccessPage() {
           </p>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between animate-in fade-in duration-200">
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 w-full animate-pulse">
@@ -107,7 +97,7 @@ export default function WebDAVAccessPage() {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/dav`);
-                          setAlertMessage("WebDAV Connection URL copied to clipboard.");
+                          toast.success("WebDAV Connection URL copied to clipboard.");
                         }}
                         className="text-blue-500 hover:text-blue-700 font-bold shrink-0 cursor-pointer"
                         title="Copy URL"

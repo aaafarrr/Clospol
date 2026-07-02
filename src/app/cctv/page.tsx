@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface CameraItem {
   id: string;
@@ -33,6 +34,7 @@ interface GalleryFile {
 interface HeaderRow {
   key: string;
   value: string;
+  value_type?: string;
 }
 
 export default function CctvPage() {
@@ -65,7 +67,7 @@ export default function CctvPage() {
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [capturingSnapId, setCapturingSnapId] = useState<string | null>(null);
   const [recordingClip, setRecordingClip] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [streamLoading, setStreamLoading] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
 
@@ -292,7 +294,7 @@ export default function CctvPage() {
 
   const importOnvifDetails = async () => {
     if (!form.onvifUrl) {
-      window.alert("Please fill out the ONVIF device service URL.");
+      toast.warn("Please fill out the ONVIF device service URL.");
       return;
     }
     setImportingOnvif(true);
@@ -319,9 +321,9 @@ export default function CctvPage() {
         streamUrl: data.rtspUrl || data.snapshotUrl || prev.streamUrl,
         snapshotUrl: data.snapshotUrl || prev.snapshotUrl,
       }));
-      window.alert("Success: Connected to ONVIF service! Raw video and image endpoints imported successfully.");
+      toast.success("Success: Connected to ONVIF service! Raw video and image endpoints imported successfully.");
     } catch (err: any) {
-      window.alert("ONVIF Connection Failed: " + err.message);
+      toast.error("ONVIF Connection Failed: " + err.message);
     } finally {
       setImportingOnvif(false);
     }
@@ -329,7 +331,7 @@ export default function CctvPage() {
 
   const testCameraConnection = async () => {
     if (!form.streamUrl) {
-      window.alert("Please fill out the Live Stream URL.");
+      toast.warn("Please fill out the Live Stream URL.");
       return;
     }
     setFormLoading(true);
@@ -345,12 +347,12 @@ export default function CctvPage() {
       });
       const data = await res.json();
       if (res.ok && data.status === "ok") {
-        window.alert("Success: CCTV Camera feed and snapshot urls verified successfully!");
+        toast.success("Success: CCTV Camera feed and snapshot urls verified successfully!");
       } else {
-        window.alert("Connection Failed: " + (data.error || "Unknown error"));
+        toast.error("Connection Failed: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      window.alert("Request error testing CCTV camera URLs.");
+      toast.error("Request error testing CCTV camera URLs.");
     } finally {
       setFormLoading(false);
     }
@@ -380,11 +382,11 @@ export default function CctvPage() {
         throw new Error(data.error || "Failed to save camera.");
       }
 
-      setAlertMessage("CCTV Camera linked and recording pipeline registered successfully!");
+      toast.success("CCTV Camera linked and recording pipeline registered successfully!");
       cancelEdit();
       loadCameras();
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message || "Failed to save camera.");
     } finally {
       setFormLoading(false);
     }
@@ -415,11 +417,11 @@ export default function CctvPage() {
         throw new Error(data.error || "Failed to update camera.");
       }
 
-      setAlertMessage("CCTV Camera configuration updated successfully!");
+      toast.success("CCTV Camera configuration updated successfully!");
       cancelEdit();
       loadCameras();
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message || "Failed to update camera.");
     } finally {
       setFormLoading(false);
     }
@@ -441,13 +443,13 @@ export default function CctvPage() {
 
       if (!res.ok) throw new Error("Deletion failed");
 
-      setAlertMessage("CCTV Camera configuration deleted successfully.");
+      toast.success("CCTV Camera configuration deleted successfully.");
       if (activeCamera && activeCamera.id === id) {
         closeLiveView();
       }
       loadCameras();
     } catch (err) {
-      window.alert("Failed to delete camera.");
+      toast.error("Failed to delete camera.");
     }
   };
 
@@ -668,10 +670,10 @@ export default function CctvPage() {
         throw new Error(data.error || "Failed to upload canvas snapshot.");
       }
 
-      setAlertMessage("Live canvas snapshot captured and saved directly to your cloud storage account!");
+      toast.success("Live canvas snapshot captured and saved directly to your cloud storage account!");
       loadGallery(activeCamera.id);
     } catch (err: any) {
-      window.alert("Canvas Capture Failed: " + err.message);
+      toast.error("Canvas Capture Failed: " + err.message);
     }
   };
 
@@ -685,13 +687,13 @@ export default function CctvPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Snapshot failed");
 
-      setAlertMessage("Server snapshot captured and uploaded to cloud successfully!");
+      toast.success("Server snapshot captured and uploaded to cloud successfully!");
       if (activeCamera && activeCamera.id === id) {
         loadGallery(id);
       }
       loadCameras();
     } catch (err: any) {
-      window.alert("Snapshot Trigger Failed: " + err.message);
+      toast.error("Snapshot Trigger Failed: " + err.message);
     } finally {
       setCapturingSnapId(null);
     }
@@ -707,11 +709,11 @@ export default function CctvPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Video recording failed");
 
-      setAlertMessage("Live camera HLS stream segments recorded and uploaded as .ts clip successfully!");
+      toast.success("Live camera HLS stream segments recorded and uploaded as .ts clip successfully!");
       loadGallery(id);
       loadCameras();
     } catch (err: any) {
-      window.alert("Video Recording Failed: " + err.message);
+      toast.error("Video Recording Failed: " + err.message);
     } finally {
       setRecordingClip(false);
     }
@@ -733,12 +735,12 @@ export default function CctvPage() {
 
       if (!res.ok) throw new Error("Failed to delete file.");
 
-      setAlertMessage("Recording file deleted successfully.");
+      toast.success("Recording file deleted successfully.");
       if (activeCamera) {
         loadGallery(activeCamera.id);
       }
     } catch (err) {
-      window.alert("Failed to delete file.");
+      toast.error("Failed to delete file.");
     }
   };
 
@@ -1232,18 +1234,7 @@ export default function CctvPage() {
           </button>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between shadow-sm">
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Collapsible Setup Guide */}
         <div className="rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-gradient-to-r from-blue-50/20 to-indigo-50/20 dark:from-blue-950/10 dark:to-indigo-950/10 p-4.5 shadow-sm transition-all duration-300">

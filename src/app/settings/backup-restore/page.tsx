@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 export default function BackupRestoreHubPage() {
   const [activeTab, setActiveTab] = useState<"cloud" | "platform">("cloud");
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const toast = useToast();
 
   // ==========================================
   // 1. CLOUD REGISTRY SYNC STATE
@@ -82,8 +82,13 @@ export default function BackupRestoreHubPage() {
   }, []);
 
   const triggerAlert = (msg: string, type: "success" | "error" | "info") => {
-    setAlertMessage(msg);
-    setAlertType(type);
+    if (type === "success") {
+      toast.success(msg);
+    } else if (type === "error") {
+      toast.error(msg);
+    } else {
+      toast.info(msg);
+    }
   };
 
   const formatDateTime = (isoStr: string | null) => {
@@ -210,7 +215,7 @@ export default function BackupRestoreHubPage() {
   // ==========================================
   const handleExportZip = () => {
     if (!backupIncludeEnv && !backupIncludeDb && !backupIncludeFiles) {
-      alert("Please select at least one component to backup.");
+      toast.warn("Please select at least one component to backup.");
       return;
     }
     const params = new URLSearchParams();
@@ -224,11 +229,11 @@ export default function BackupRestoreHubPage() {
   const handleRestoreZip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedZipFile) {
-      alert("Please select a backup ZIP archive first.");
+      toast.warn("Please select a backup ZIP archive first.");
       return;
     }
     if (!restoreIncludeEnv && !restoreIncludeDb && !restoreIncludeFiles) {
-      alert("Please select at least one component to restore.");
+      toast.warn("Please select at least one component to restore.");
       return;
     }
 
@@ -291,37 +296,7 @@ export default function BackupRestoreHubPage() {
           </p>
         </div>
 
-        {/* Dynamic Alert Banner */}
-        {alertMessage && (
-          <div
-            className={`rounded-2xl border p-4 text-xs font-bold flex items-center justify-between animate-in fade-in duration-200 ${
-              alertType === "success"
-                ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-900/40 dark:text-green-400"
-                : alertType === "error"
-                ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-400"
-                : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/20 dark:border-blue-900/40 dark:text-blue-400"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <i
-                className={`fa-solid ${
-                  alertType === "success"
-                    ? "fa-circle-check"
-                    : alertType === "error"
-                    ? "fa-circle-exclamation"
-                    : "fa-info-circle"
-                }`}
-              ></i>
-              <span>{alertMessage}</span>
-            </div>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-slate-400 hover:text-slate-650 transition shrink-0 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Tab Selection */}
         <div className="flex space-x-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl max-w-md border border-slate-200/40 dark:border-slate-800/80">

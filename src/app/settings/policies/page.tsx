@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface ConnectedAccount {
   id: string;
@@ -24,7 +25,7 @@ interface AutoTieringRule {
 
 export default function RoutingPoliciesPage() {
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   // Storage Accounts & Policy State
   const [allAccounts, setAllAccounts] = useState<ConnectedAccount[]>([]);
@@ -99,13 +100,14 @@ export default function RoutingPoliciesPage() {
         }),
       });
       if (res.ok) {
-        setAlertMessage("Upload routing policy updated successfully.");
+        toast.success("Upload routing policy updated successfully.");
         loadData();
       } else {
-        alert("Failed to save routing policy.");
+        toast.error("Failed to save routing policy.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while saving routing policy.");
     } finally {
       setPolicy((prev) => ({ ...prev, saving: false }));
     }
@@ -140,7 +142,7 @@ export default function RoutingPoliciesPage() {
   const saveAutoTieringRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tieringForm.targetAccountId) {
-      alert("Target storage destination is required.");
+      toast.warn("Target storage destination is required.");
       return;
     }
     setTieringForm((prev) => ({ ...prev, loading: true }));
@@ -158,7 +160,7 @@ export default function RoutingPoliciesPage() {
         }),
       });
       if (res.ok) {
-        setAlertMessage("Auto-tiering rule created successfully.");
+        toast.success("Auto-tiering rule created successfully.");
         setTieringForm({
           name: "",
           sourceAccountId: "",
@@ -168,10 +170,11 @@ export default function RoutingPoliciesPage() {
         });
         loadData();
       } else {
-        alert("Failed to create tiering rule.");
+        toast.error("Failed to create tiering rule.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while creating auto-tiering rule.");
     } finally {
       setTieringForm((prev) => ({ ...prev, loading: false }));
     }
@@ -183,12 +186,14 @@ export default function RoutingPoliciesPage() {
         method: "PATCH",
       });
       if (res.ok) {
+        toast.success(`Rule "${rule.name}" status toggled.`);
         loadData();
       } else {
-        alert("Failed to toggle rule.");
+        toast.error("Failed to toggle rule.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while toggling the rule status.");
     }
   };
 
@@ -199,13 +204,14 @@ export default function RoutingPoliciesPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        setAlertMessage("Rule deleted successfully.");
+        toast.success("Rule deleted successfully.");
         loadData();
       } else {
-        alert("Failed to delete rule.");
+        toast.error("Failed to delete rule.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while deleting the rule.");
     }
   };
 
@@ -222,18 +228,7 @@ export default function RoutingPoliciesPage() {
           </p>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between animate-in fade-in duration-200">
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 w-full">

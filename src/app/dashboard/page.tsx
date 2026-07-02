@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface StorageAccountItem {
   id: string;
@@ -50,7 +51,7 @@ interface MessengerIntegrationItem {
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [googleOAuthMissing, setGoogleOAuthMissing] = useState(false);
 
   // Quotas & Stats
@@ -165,14 +166,15 @@ export default function DashboardPage() {
         method: "POST",
       });
       if (res.ok) {
-        setAlertMessage(`Quota updated for ${account.displayName || account.email}.`);
+        toast.success(`Quota updated for ${account.displayName || account.email}.`);
         fetchData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to sync quota");
+        toast.error("Failed to sync quota");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while syncing quota.");
     } finally {
       setAccounts((prev) => prev.map((a) => (a.id === account.id ? { ...a, syncing: false } : a)));
     }
@@ -187,14 +189,15 @@ export default function DashboardPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        setAlertMessage(`Account disconnected successfully.`);
+        toast.success(`Account disconnected successfully.`);
         fetchData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to disconnect account");
+        toast.error("Failed to disconnect account");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while disconnecting the account.");
     }
   };
 
@@ -205,14 +208,15 @@ export default function DashboardPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        setAlertMessage("File deleted successfully.");
+        toast.success("File deleted successfully.");
         fetchData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to delete file");
+        toast.error("Failed to delete file");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while deleting the file.");
     }
   };
 
@@ -382,18 +386,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between">
-            <span>{alertMessage}</span>
-            <button 
-              onClick={() => setAlertMessage(null)} 
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {loading ? (
           <div className="grid gap-6 md:grid-cols-4">

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 export default function SystemAdminAndProfilePage() {
   const [activeTab, setActiveTab] = useState<"account" | "system" | "advanced" | "maintenance">("account");
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   // ==========================================
   // 1. ACCOUNT PROFILE STATE & HANDLERS
@@ -33,13 +34,14 @@ export default function SystemAdminAndProfilePage() {
         body: JSON.stringify({ name: userProfile.name, email: userProfile.email }),
       });
       if (res.ok) {
-        setAlertMessage("Profile details updated successfully.");
+        toast.success("Profile details updated successfully.");
         loadData();
       } else {
-        alert("Failed to update profile.");
+        toast.error("Failed to update profile.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while updating profile.");
     } finally {
       setUserProfile((prev) => ({ ...prev, loading: false }));
     }
@@ -48,7 +50,7 @@ export default function SystemAdminAndProfilePage() {
   const updatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordForm.new !== passwordForm.confirm) {
-      alert("New password and confirmation do not match.");
+      toast.warn("New password and confirmation do not match.");
       return;
     }
     setPasswordForm((prev) => ({ ...prev, loading: true }));
@@ -59,14 +61,15 @@ export default function SystemAdminAndProfilePage() {
         body: JSON.stringify({ oldPassword: passwordForm.current, newPassword: passwordForm.new }),
       });
       if (res.ok) {
-        setAlertMessage("Password changed successfully.");
+        toast.success("Password changed successfully.");
         setPasswordForm({ current: "", new: "", confirm: "", loading: false });
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to change password.");
+        toast.error(data.error || "Failed to change password.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while changing password.");
     } finally {
       setPasswordForm((prev) => ({ ...prev, loading: false }));
     }
@@ -172,23 +175,23 @@ export default function SystemAdminAndProfilePage() {
 
   const handleCleanCache = async () => {
     setCleaningCache(true);
-    setAlertMessage(null);
     try {
       const res = await fetch("/api/settings/cache", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
           const freed = formatBytes(data.result.bytesFreed);
-          setAlertMessage(`Purged ${data.result.filesDeleted} files and ${data.result.logsDeleted} database log entries successfully (${freed} freed).`);
+          toast.success(`Purged ${data.result.filesDeleted} files and ${data.result.logsDeleted} database log entries successfully (${freed} freed).`);
           await loadCacheStats();
         } else {
-          alert(data.error || "Failed to clear cache.");
+          toast.error(data.error || "Failed to clear cache.");
         }
       } else {
-        alert("Server returned error response while clearing cache.");
+        toast.error("Server returned error response while clearing cache.");
       }
     } catch (err) {
       console.error("Failed to clear cache:", err);
+      toast.error("An error occurred while clearing cache.");
     } finally {
       setCleaningCache(false);
     }
@@ -277,13 +280,14 @@ export default function SystemAdminAndProfilePage() {
         body: JSON.stringify({ env: updatedEnv }),
       });
       if (res.ok) {
-        setAlertMessage("System timezone (TZ) configuration updated successfully.");
+        toast.success("System timezone (TZ) configuration updated successfully.");
         loadData();
       } else {
-        alert("Failed to update timezone configuration.");
+        toast.error("Failed to update timezone configuration.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while updating timezone.");
     } finally {
       setSavingTimezone(false);
     }
@@ -307,13 +311,14 @@ export default function SystemAdminAndProfilePage() {
         body: JSON.stringify({ env: updatedEnv }),
       });
       if (res.ok) {
-        setAlertMessage("System configurations saved successfully.");
+        toast.success("System configurations saved successfully.");
         loadData();
       } else {
-        alert("Failed to update system configurations.");
+        toast.error("Failed to update system configurations.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while saving system config.");
     } finally {
       setSavingAdvanced(false);
     }
@@ -348,13 +353,14 @@ export default function SystemAdminAndProfilePage() {
         body: JSON.stringify({ env: updatedEnv }),
       });
       if (res.ok) {
-        setAlertMessage("Cloud storage provider OAuth configurations saved successfully.");
+        toast.success("Cloud storage provider OAuth configurations saved successfully.");
         loadData();
       } else {
-        alert("Failed to update OAuth credentials.");
+        toast.error("Failed to update OAuth credentials.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while saving OAuth config.");
     } finally {
       setSavingAdvanced(false);
     }
@@ -418,18 +424,7 @@ export default function SystemAdminAndProfilePage() {
           </p>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl flex items-center justify-between gap-3 text-xs text-blue-700 dark:text-blue-400 font-bold animate-in fade-in duration-200">
-            <div className="flex items-center gap-2 min-w-0">
-              <i className="fa-solid fa-circle-info text-blue-500 shrink-0"></i>
-              <span className="truncate">{alertMessage}</span>
-            </div>
-            <button onClick={() => setAlertMessage(null)} className="text-blue-400 hover:text-blue-600 transition shrink-0 cursor-pointer">
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Tab Selector */}
         <div className="flex overflow-x-auto no-scrollbar space-x-1 p-1 bg-slate-100 dark:bg-slate-955 rounded-2xl max-w-2xl border border-slate-200/40 dark:border-slate-800/80 animate-in fade-in duration-200">

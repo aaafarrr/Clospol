@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface ShareItem {
   id: string;
@@ -22,7 +23,7 @@ export default function SharedPage() {
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"files" | "folders">("files");
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const loadData = async () => {
     try {
@@ -46,10 +47,11 @@ export default function SharedPage() {
   const copyLink = (url: string) => {
     navigator.clipboard.writeText(url)
       .then(() => {
-        setAlertMessage("Public share URL copied to clipboard.");
+        toast.success("Public share URL copied to clipboard.");
       })
       .catch((err) => {
         console.error("Could not copy link:", err);
+        toast.error("Failed to copy link to clipboard.");
       });
   };
 
@@ -66,13 +68,14 @@ export default function SharedPage() {
         method: "DELETE",
       });
       if (res.ok) {
-        setAlertMessage(`Public share link for this ${typeLabel} revoked.`);
+        toast.success(`Public share link for this ${typeLabel} revoked.`);
         loadData();
       } else {
-        alert("Failed to revoke share link.");
+        toast.error("Failed to revoke share link.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while revoking the share link.");
     }
   };
 
@@ -144,18 +147,7 @@ export default function SharedPage() {
           </div>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between animate-in fade-in duration-200">
-            <span>{alertMessage}</span>
-            <button 
-              onClick={() => setAlertMessage(null)} 
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Tab Selector */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">

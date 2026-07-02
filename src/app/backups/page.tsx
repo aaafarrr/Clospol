@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface BackupScheduleItem {
   id: string;
@@ -60,7 +61,7 @@ export default function BackupsPage() {
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideDbTab, setGuideDbTab] = useState<"mysql" | "pgsql" | "sqlite">("mysql");
 
@@ -151,12 +152,12 @@ export default function BackupsPage() {
   const testDbConnection = async () => {
     if (form.driver === "sqlite") {
       if (!form.database) {
-        window.alert("Please fill SQLite File Path before testing connection.");
+        toast.warn("Please fill SQLite File Path before testing connection.");
         return;
       }
     } else {
       if (!form.host || !form.database || !form.username) {
-        window.alert("Please fill Host, Database, and Username before testing connection.");
+        toast.warn("Please fill Host, Database, and Username before testing connection.");
         return;
       }
     }
@@ -182,12 +183,12 @@ export default function BackupsPage() {
 
       const data = await res.json();
       if (res.ok && data.status === "ok") {
-        window.alert("Connection Succeeded! Database credentials are valid.");
+        toast.success("Connection Succeeded! Database credentials are valid.");
       } else {
-        window.alert("Connection Failed: " + (data.error || data.message || "Unknown error"));
+        toast.error("Connection Failed: " + (data.error || data.message || "Unknown error"));
       }
     } catch (err) {
-      window.alert("Request error testing database connection.");
+      toast.error("Request error testing database connection.");
     } finally {
       setTestingConnection(false);
     }
@@ -196,7 +197,6 @@ export default function BackupsPage() {
   const saveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setAlertMessage(null);
 
     try {
       const res = await fetch("/api/database-backups", {
@@ -225,7 +225,7 @@ export default function BackupsPage() {
         throw new Error(data.error || "Failed to save schedule.");
       }
 
-      setAlertMessage("Database backup pipeline created and active successfully!");
+      toast.success("Database backup pipeline created and active successfully!");
       setForm({
         name: "",
         driver: "mysql",
@@ -241,7 +241,7 @@ export default function BackupsPage() {
       setHeadersList([]);
       loadData();
     } catch (err: any) {
-      window.alert(err.message);
+      toast.error(err.message || "Failed to save schedule.");
     } finally {
       setLoading(false);
     }
@@ -249,7 +249,6 @@ export default function BackupsPage() {
 
   const triggerBackup = async (id: string) => {
     setTriggeringId(id);
-    setAlertMessage(null);
 
     try {
       const res = await fetch(`/api/database-backups/${id}/trigger`, {
@@ -264,10 +263,10 @@ export default function BackupsPage() {
         throw new Error(data.error || "Backup failed.");
       }
 
-      setAlertMessage("Database manual backup successfully executed and synced to your cloud storage!");
+      toast.success("Database manual backup successfully executed and synced to your cloud storage!");
       loadData();
     } catch (err: any) {
-      window.alert("Backup Failed: " + err.message);
+      toast.error("Backup Failed: " + err.message);
       loadData();
     } finally {
       setTriggeringId(null);
@@ -293,10 +292,10 @@ export default function BackupsPage() {
 
       if (!res.ok) throw new Error("Deletion failed");
 
-      setAlertMessage("Database backup schedule connection deleted successfully.");
+      toast.success("Database backup schedule connection deleted successfully.");
       loadData();
     } catch (err) {
-      window.alert("Failed to delete schedule.");
+      toast.error("Failed to delete schedule.");
     }
   };
 
@@ -317,18 +316,7 @@ export default function BackupsPage() {
           </p>
         </div>
 
-        {/* Alert Message */}
-        {alertMessage && (
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between shadow-sm">
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Tutorial & Guide Accordion */}
         <div className="rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-500/5 to-amber-600/5 dark:border-amber-900/40 p-5 shadow-sm space-y-4">

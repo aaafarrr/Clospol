@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 export default function RawPathResolverSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [alertType, setAlertType] = useState<"success" | "error">("success");
+  const toast = useToast();
 
   // Form states
   const [enabled, setEnabled] = useState(true);
@@ -40,7 +40,6 @@ export default function RawPathResolverSettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setAlertMessage(null);
 
     try {
       const res = await fetch("/api/settings/env", {
@@ -59,17 +58,14 @@ export default function RawPathResolverSettingsPage() {
       });
 
       if (res.ok) {
-        setAlertType("success");
-        setAlertMessage("Raw path resolver configuration updated successfully.");
+        toast.success("Raw path resolver configuration updated successfully.");
       } else {
         const data = await res.json();
-        setAlertType("error");
-        setAlertMessage(data.error || "Failed to update configurations.");
+        toast.error(data.error || "Failed to update configurations.");
       }
     } catch (err: any) {
       console.error("Failed to save Raw resolver settings:", err);
-      setAlertType("error");
-      setAlertMessage(err.message || "An unexpected error occurred.");
+      toast.error(err.message || "An unexpected error occurred.");
     } finally {
       setSaving(false);
     }
@@ -92,22 +88,7 @@ export default function RawPathResolverSettingsPage() {
           </p>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className={`rounded-2xl border p-4 text-sm font-bold flex items-center justify-between animate-in fade-in duration-200 ${
-            alertType === "success" 
-              ? "bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-950/20 dark:border-blue-900/50 dark:text-blue-400" 
-              : "bg-rose-50 border-rose-100 text-rose-750 dark:bg-rose-950/20 dark:border-rose-900/50 dark:text-rose-450"
-          }`}>
-            <span>{alertMessage}</span>
-            <button
-              onClick={() => setAlertMessage(null)}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-350 cursor-pointer"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {loading ? (
           <div className="grid gap-6 lg:grid-cols-2 w-full animate-pulse">

@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import SidebarLayout from "@/components/layout/sidebar";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface DBFolder {
   id: string;
@@ -58,6 +59,7 @@ function AllFilesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const folderIdParam = searchParams.get("folderId") || null;
+  const toast = useToast();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -275,7 +277,16 @@ function AllFilesContent() {
   const [movingItem, setMovingItem] = useState<{ id: string; name: string; type: "file" | "folder" } | null>(null);
 
   // Status Alerts
-  const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const alert = null;
+  const setAlert = (val: { type: "success" | "error"; message: string } | null) => {
+    if (val) {
+      if (val.type === "success") {
+        toast.success(val.message);
+      } else {
+        toast.error(val.message);
+      }
+    }
+  };
   const [actionLoading, setActionLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -888,7 +899,7 @@ function AllFilesContent() {
     e.preventDefault();
     if (!activeItem) return;
     if (!targetAccountId) {
-      window.alert("Please select a destination storage node.");
+      toast.warn("Please select a destination storage node.");
       return;
     }
     setActionLoading(true);
@@ -1202,19 +1213,7 @@ function AllFilesContent() {
             </div>
           </div>
 
-          {alert && (
-            <div className={`p-4 rounded-2xl flex items-start gap-3 border ${
-              alert.type === "success" 
-                ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300" 
-                : "bg-rose-950/40 border-rose-800/60 text-rose-300"
-            }`}>
-              {alert.type === "success" ? <i className="fa-solid fa-circle-check mt-0.5"></i> : <i className="fa-solid fa-circle-exclamation mt-0.5"></i>}
-              <div className="flex-1 text-xs font-semibold">{alert.message}</div>
-              <button onClick={() => setAlert(null)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-          )}
+
 
           {/* Google Drive style Selection Header overlay */}
           {selectedItems.size > 0 ? (
@@ -2898,7 +2897,7 @@ function AllFilesContent() {
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(generatedShareUrl);
-                      window.alert("Share URL copied to clipboard!");
+                      toast.success("Share URL copied to clipboard!");
                     }}
                     className="p-1.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
                   >

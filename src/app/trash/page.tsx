@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface FileItem {
   id: string;
@@ -36,7 +37,7 @@ export default function TrashPage() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
@@ -89,14 +90,15 @@ export default function TrashPage() {
     try {
       const res = await fetch(`/api/files/${id}/restore`, { method: "POST" });
       if (res.ok) {
-        setAlertMessage("File successfully restored.");
+        toast.success("File successfully restored.");
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to restore file.");
+        toast.error("Failed to restore file.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while restoring the file.");
     }
   };
 
@@ -105,14 +107,15 @@ export default function TrashPage() {
     try {
       const res = await fetch(`/api/files/${id}/permanent`, { method: "DELETE" });
       if (res.ok) {
-        setAlertMessage("File permanently deleted from storage.");
+        toast.success("File permanently deleted from storage.");
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to permanently delete file.");
+        toast.error("Failed to permanently delete file.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while deleting the file.");
     }
   };
 
@@ -120,14 +123,15 @@ export default function TrashPage() {
     try {
       const res = await fetch(`/api/folders/${id}/restore`, { method: "POST" });
       if (res.ok) {
-        setAlertMessage("Folder structure restored successfully.");
+        toast.success("Folder structure restored successfully.");
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to restore folder.");
+        toast.error("Failed to restore folder.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while restoring the folder.");
     }
   };
 
@@ -136,14 +140,15 @@ export default function TrashPage() {
     try {
       const res = await fetch(`/api/folders/${id}/permanent`, { method: "DELETE" });
       if (res.ok) {
-        setAlertMessage("Folder and all its contents permanently deleted from storage.");
+        toast.success("Folder and all its contents permanently deleted from storage.");
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to permanently delete folder.");
+        toast.error("Failed to permanently delete folder.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while deleting the folder.");
     }
   };
 
@@ -183,7 +188,7 @@ export default function TrashPage() {
   };
 
   const toggleSelectAllFiles = () => {
-    if (isAllFilesSelected()) {
+    if (isAllSelected()) {
       setSelectedItems(selectedItems.filter(i => i.type !== "file"));
     } else {
       const fileSelections = files.map(f => ({ id: f.id, type: "file" as const }));
@@ -208,15 +213,16 @@ export default function TrashPage() {
         body: JSON.stringify({ fileIds, folderIds })
       });
       if (res.ok) {
-        setAlertMessage("Selected items restored successfully.");
+        toast.success("Selected items restored successfully.");
         setSelectedItems([]);
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to restore selected items.");
+        toast.error("Failed to restore selected items.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while performing bulk restore.");
     }
   };
 
@@ -233,15 +239,16 @@ export default function TrashPage() {
         body: JSON.stringify({ fileIds, folderIds })
       });
       if (res.ok) {
-        setAlertMessage("Selected items permanently deleted.");
+        toast.success("Selected items permanently deleted.");
         setSelectedItems([]);
         fetchTrash();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to delete selected items.");
+        toast.error("Failed to delete selected items.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while performing bulk deletion.");
     }
   };
 
@@ -593,18 +600,7 @@ export default function TrashPage() {
           )}
         </div>
 
-        {/* Alert Messaging */}
-        {alertMessage && (
-          <div className="mt-5 rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between">
-            <span>{alertMessage}</span>
-            <button 
-              onClick={() => setAlertMessage(null)} 
-              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Content Area */}
         {loading ? (

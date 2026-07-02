@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface ConnectedAccount {
   id: string;
@@ -12,7 +13,7 @@ interface ConnectedAccount {
 
 export default function ConnectedDrivesPage() {
   const [loading, setLoading] = useState(true);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   // Storage Accounts
   const [googleAccounts, setGoogleAccounts] = useState<ConnectedAccount[]>([]);
@@ -113,31 +114,31 @@ export default function ConnectedDrivesPage() {
     const handleOAuthMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === "clospol:google-connected") {
         if (event.data.status === "success") {
-          setAlertMessage("Google Drive account connected successfully.");
+          toast.success("Google Drive account connected successfully.");
           loadData();
           window.dispatchEvent(new CustomEvent("storage-changed"));
         } else {
-          alert("Google connection failed.");
+          toast.error("Google connection failed.");
         }
         setLinkingGoogle(false);
       }
       if (event.data && event.data.type === "clospol:onedrive-connected") {
         if (event.data.status === "success") {
-          setAlertMessage("Microsoft OneDrive account connected successfully.");
+          toast.success("Microsoft OneDrive account connected successfully.");
           loadData();
           window.dispatchEvent(new CustomEvent("storage-changed"));
         } else {
-          alert("OneDrive connection failed: " + (event.data.message || "Unknown error"));
+          toast.error("OneDrive connection failed: " + (event.data.message || "Unknown error"));
         }
         setLinkingOnedrive(false);
       }
       if (event.data && event.data.type === "clospol:dropbox-connected") {
         if (event.data.status === "success") {
-          setAlertMessage("Dropbox account connected successfully.");
+          toast.success("Dropbox account connected successfully.");
           loadData();
           window.dispatchEvent(new CustomEvent("storage-changed"));
         } else {
-          alert("Dropbox connection failed: " + (event.data.message || "Unknown error"));
+          toast.error("Dropbox connection failed: " + (event.data.message || "Unknown error"));
         }
         setLinkingDropbox(false);
       }
@@ -230,14 +231,15 @@ export default function ConnectedDrivesPage() {
     try {
       const res = await fetch(`/api/storages/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setAlertMessage("Account disconnected successfully.");
+        toast.success("Account disconnected successfully.");
         loadData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to disconnect account.");
+        toast.error("Failed to disconnect account.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while disconnecting the account.");
     }
   };
 
@@ -258,13 +260,14 @@ export default function ConnectedDrivesPage() {
         body: JSON.stringify({ env: updatedEnv }),
       });
       if (res.ok) {
-        setAlertMessage("Google OAuth client configurations saved successfully.");
+        toast.success("Google OAuth client configurations saved successfully.");
         loadData();
       } else {
-        alert("Failed to save credentials.");
+        toast.error("Failed to save credentials.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while saving Google credentials.");
     } finally {
       setGoogleCreds((prev) => ({ ...prev, loading: false }));
     }
@@ -291,7 +294,7 @@ export default function ConnectedDrivesPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setAlertMessage(`S3 Bucket ${s3Form.bucket} successfully connected.`);
+        toast.success(`S3 Bucket ${s3Form.bucket} successfully connected.`);
         setShowS3Modal(false);
         setS3Form({
           name: "",
@@ -308,10 +311,11 @@ export default function ConnectedDrivesPage() {
         loadData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("S3 Error: " + (data.message || data.error || "Connection failed"));
+        toast.error("S3 Error: " + (data.message || data.error || "Connection failed"));
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while connecting S3 storage.");
     } finally {
       setS3Form((prev) => ({ ...prev, loading: false }));
     }
@@ -332,7 +336,7 @@ export default function ConnectedDrivesPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setAlertMessage(`Local Storage ${localForm.name} successfully connected.`);
+        toast.success(`Local Storage ${localForm.name} successfully connected.`);
         setShowLocalModal(false);
         setLocalForm({
           name: "",
@@ -343,10 +347,11 @@ export default function ConnectedDrivesPage() {
         loadData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Local Storage Error: " + (data.message || data.error || "Connection failed"));
+        toast.error("Local Storage Error: " + (data.message || data.error || "Connection failed"));
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while connecting local storage.");
     } finally {
       setLocalForm((prev) => ({ ...prev, loading: false }));
     }
@@ -390,15 +395,16 @@ export default function ConnectedDrivesPage() {
         }),
       });
       if (res.ok) {
-        setAlertMessage("Local storage configuration updated successfully.");
+        toast.success("Local storage configuration updated successfully.");
         setShowEditLocalModal(false);
         loadData();
         window.dispatchEvent(new CustomEvent("storage-changed"));
       } else {
-        alert("Failed to update config.");
+        toast.error("Failed to update config.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("An error occurred while updating configuration.");
     } finally {
       setEditLocalForm((prev) => ({ ...prev, loading: false }));
     }
@@ -421,18 +427,7 @@ export default function ConnectedDrivesPage() {
           </p>
         </div>
 
-        {/* Alert Banner */}
-        {alertMessage && (
-          <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl flex items-center justify-between gap-3 text-xs text-blue-700 dark:text-blue-400 font-bold animate-in fade-in duration-200">
-            <div className="flex items-center gap-2 min-w-0">
-              <i className="fa-solid fa-circle-info text-blue-500 shrink-0"></i>
-              <span className="truncate">{alertMessage}</span>
-            </div>
-            <button onClick={() => setAlertMessage(null)} className="text-blue-400 hover:text-blue-600 transition shrink-0 cursor-pointer">
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        )}
+
 
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 w-full animate-pulse">

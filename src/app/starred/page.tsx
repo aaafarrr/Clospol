@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface FileItem {
   id: string;
@@ -39,7 +40,7 @@ export default function StarredPage() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const sortDropdownRef = React.useRef<HTMLDivElement>(null);
   const typeDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -88,16 +89,16 @@ export default function StarredPage() {
   useEffect(() => {
     fetchStarred();
   }, []);
-
   const toggleFileStar = async (id: string) => {
     try {
       const res = await fetch(`/api/files/${id}/star`, { method: "POST" });
       if (res.ok) {
-        setAlertMessage("Item removed from starred.");
+        toast.success("Item removed from starred.");
         fetchStarred();
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to remove item from starred.");
     }
   };
 
@@ -105,11 +106,12 @@ export default function StarredPage() {
     try {
       const res = await fetch(`/api/folders/${id}/star`, { method: "POST" });
       if (res.ok) {
-        setAlertMessage("Item removed from starred.");
+        toast.success("Item removed from starred.");
         fetchStarred();
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to remove item from starred.");
     }
   };
 
@@ -181,11 +183,11 @@ export default function StarredPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Batch unstar operation failed.");
 
-      setAlertMessage("Selected items removed from starred.");
+      toast.success("Selected items removed from starred.");
       deselectAll();
       fetchStarred();
     } catch (err: any) {
-      setAlertMessage(err.message);
+      toast.error(err.message || "Failed to remove items from starred.");
     }
   };
 
@@ -482,15 +484,7 @@ export default function StarredPage() {
           )}
         </div>
 
-        {/* Alert Messaging */}
-        {alertMessage && (
-          <div className="mt-5 rounded-2xl bg-blue-50 border border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50 p-4 text-sm font-bold text-blue-700 dark:text-blue-400 flex items-center justify-between">
-            <span>{alertMessage}</span>
-            <button onClick={() => setAlertMessage(null)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer">
-              <i className="fa-solid fa-xmark text-sm"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Loading Skeleton */}
         {loading ? (
