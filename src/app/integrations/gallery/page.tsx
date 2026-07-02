@@ -54,7 +54,15 @@ function GalleryContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "image" | "video" | "audio" | "document">("all");
   const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "size_desc" | "size_asc" | "name_asc" | "name_desc">("date_desc");
-  const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toasts, setToasts] = useState<{ id: string; type: "success" | "error" | "info" | "warning"; message: string }[]>([]);
+
+  const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "success") => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
 
   // Lightbox State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -243,11 +251,10 @@ function GalleryContent() {
         setFiles((prev) =>
           prev.map((f) => (f.id === file.id ? { ...f, isStarred: data.isStarred } : f))
         );
-        setAlert({
-          type: "success",
-          message: data.isStarred ? `Menambahkan "${file.name}" ke Favorit` : `Menghapus "${file.name}" dari Favorit`,
-        });
-        setTimeout(() => setAlert(null), 3000);
+        showToast(
+          data.isStarred ? `Menambahkan "${file.name}" ke Favorit` : `Menghapus "${file.name}" dari Favorit`,
+          "success"
+        );
       }
     } catch (err) {
       console.error(err);
@@ -258,11 +265,7 @@ function GalleryContent() {
   const handleDeleteFile = async (file: DBFile, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (file.isStarred) {
-      setAlert({
-        type: "error",
-        message: "File favorit tidak dapat dihapus. Hapus bintang favorit terlebih dahulu.",
-      });
-      setTimeout(() => setAlert(null), 4000);
+      showToast("File favorit tidak dapat dihapus. Hapus bintang favorit terlebih dahulu.", "error");
       return;
     }
     if (!confirm(`Apakah Anda yakin ingin membuang "${file.name}" ke tempat sampah?`)) return;
@@ -273,11 +276,7 @@ function GalleryContent() {
       });
       if (res.ok) {
         setFiles((prev) => prev.filter((f) => f.id !== file.id));
-        setAlert({
-          type: "success",
-          message: `Berhasil memindahkan "${file.name}" ke Tempat Sampah`,
-        });
-        setTimeout(() => setAlert(null), 3000);
+        showToast(`Berhasil memindahkan "${file.name}" ke Tempat Sampah`, "success");
         
         if (lightboxIndex !== null) {
           if (filteredFilesList.length <= 1) {
@@ -289,7 +288,7 @@ function GalleryContent() {
         }
       } else {
         const errData = await res.json();
-        alert(errData.error || "Gagal menghapus file");
+        showToast(errData.error || "Gagal menghapus file", "error");
       }
     } catch (err) {
       console.error(err);
@@ -367,19 +366,7 @@ function GalleryContent() {
           </div>
         </div>
 
-        {/* Alerts */}
-        {alert && (
-          <div className={`rounded-2xl border p-4 text-sm font-bold flex items-center justify-between animate-in fade-in duration-200 ${
-            alert.type === "success" 
-              ? "bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-900/50 dark:text-emerald-400" 
-              : "bg-rose-50 border-rose-100 text-rose-700 dark:bg-rose-950/20 dark:border-rose-900/50 dark:text-rose-400"
-          }`}>
-            <span>{alert.message}</span>
-            <button onClick={() => setAlert(null)} className="opacity-60 hover:opacity-100 cursor-pointer">
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        )}
+
 
         {/* Filtering & Controls Bar */}
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50/50 dark:bg-slate-900/20 border border-slate-200/60 dark:border-slate-800/80 rounded-2xl p-4.5">
@@ -782,6 +769,57 @@ function GalleryContent() {
           </div>
         </div>
       )}
+      {/* Toast Notification Container */}
+      <div className="fixed top-5 right-5 z-[9999] space-y-3 max-w-sm w-full pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-2xl border shadow-xl animate-in slide-in-from-right duration-300 ${
+              toast.type === "success"
+                ? "bg-white dark:bg-slate-900 border-emerald-100 dark:border-emerald-950/60 text-slate-800 dark:text-slate-200"
+                : toast.type === "error"
+                ? "bg-white dark:bg-slate-900 border-rose-100 dark:border-rose-950/60 text-slate-800 dark:text-slate-200"
+                : toast.type === "warning"
+                ? "bg-white dark:bg-slate-900 border-amber-100 dark:border-amber-950/60 text-slate-800 dark:text-slate-200"
+                : "bg-white dark:bg-slate-900 border-blue-100 dark:border-blue-950/60 text-slate-800 dark:text-slate-200"
+            }`}
+          >
+            {/* Icon */}
+            <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold ${
+              toast.type === "success"
+                ? "bg-emerald-500/10 text-emerald-500"
+                : toast.type === "error"
+                ? "bg-rose-500/10 text-rose-500"
+                : toast.type === "warning"
+                ? "bg-amber-500/10 text-amber-500"
+                : "bg-blue-500/10 text-blue-500"
+            }`}>
+              {toast.type === "success" && <i className="fa-solid fa-circle-check text-xs"></i>}
+              {toast.type === "error" && <i className="fa-solid fa-circle-exclamation text-xs"></i>}
+              {toast.type === "warning" && <i className="fa-solid fa-triangle-exclamation text-xs"></i>}
+              {toast.type === "info" && <i className="fa-solid fa-circle-info text-xs"></i>}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <h4 className="text-xs font-black capitalize">
+                {toast.type === "success" ? "Sukses" : toast.type === "error" ? "Error" : toast.type}
+              </h4>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed break-words">
+                {toast.message}
+              </p>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer shrink-0"
+            >
+              <i className="fa-solid fa-xmark text-xs"></i>
+            </button>
+          </div>
+        ))}
+      </div>
     </SidebarLayout>
   );
 }
