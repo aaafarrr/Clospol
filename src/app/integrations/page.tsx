@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import SidebarLayout from "@/components/layout/sidebar";
+import Link from "next/link";
 
 interface IntegrationItem {
   id: string;
@@ -306,11 +307,20 @@ export default function IntegrationsPage() {
     <SidebarLayout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">Messenger Integrations</h1>
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1 border-b border-slate-100 dark:border-slate-800 pb-5">
-            Connect WhatsApp and Telegram accounts to auto-save incoming images and files to your cloud storage
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100">Messenger Integrations</h1>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1">
+              Connect WhatsApp and Telegram accounts to auto-save incoming images and files to your cloud storage
+            </p>
+          </div>
+          <Link 
+            href="/integrations/gallery"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap self-start sm:self-center"
+          >
+            <i className="fa-solid fa-images text-base"></i>
+            <span>Lihat File Tersimpan</span>
+          </Link>
         </div>
 
         {/* Alert Message */}
@@ -508,6 +518,14 @@ export default function IntegrationsPage() {
                                 )}
                               </div>
                             )}
+                            <Link
+                              href={`/integrations/gallery?integrationId=${item.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-[10px] font-bold shadow-sm transition cursor-pointer shrink-0"
+                              title="Lihat file yang disimpan"
+                            >
+                              <i className="fa-solid fa-images"></i>
+                              <span>Lihat File</span>
+                            </Link>
                             <button 
                               onClick={() => deleteIntegration(item.id)} 
                               className="rounded-lg p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-600 transition cursor-pointer"
@@ -515,6 +533,7 @@ export default function IntegrationsPage() {
                               <i className="fa-solid fa-trash-can text-sm"></i>
                             </button>
                           </div>
+
                         </div>
 
                         {isWhatsAppUn && (
