@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { randomUUID } from "crypto";
 import { Readable } from "stream";
 import pino from "pino";
 import QRCode from "qrcode";
