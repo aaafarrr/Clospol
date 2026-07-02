@@ -33,6 +33,8 @@ interface Conversation {
   integrationId: string;
   messages: MessageItem[];
   latestMessage: MessageItem;
+  matchChatName?: boolean;
+  matchedMessages?: MessageItem[];
 }
 
 export default function IntegrationsFeedPage() {
@@ -57,6 +59,12 @@ function FeedContent() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [integrations, setIntegrations] = useState<{ id: string; name: string }[]>([]);
   const [selectedIntegration, setSelectedIntegration] = useState(initialIntegrationId);
+  
+  // Date Filters
+  const [dateRangeType, setDateRangeType] = useState<string>("all");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+
   const [loading, setLoading] = useState(true);
   const [activeChatKey, setActiveChatKey] = useState<string | null>(null);
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -101,6 +109,60 @@ function FeedContent() {
     fetchMessages();
   }, []);
 
+  // Compute active date bounds
+  const dateRangeBounds = useMemo(() => {
+    let start = "";
+    let end = "";
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+
+    if (dateRangeType === "today") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      start = todayStart.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    } else if (dateRangeType === "week") {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      weekAgo.setHours(0, 0, 0, 0);
+      start = weekAgo.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    } else if (dateRangeType === "month") {
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      monthAgo.setHours(0, 0, 0, 0);
+      start = monthAgo.toISOString().split("T")[0];
+      end = now.toISOString().split("T")[0];
+    } else if (dateRangeType === "custom") {
+      start = customStartDate;
+      end = customEndDate;
+    }
+    return { start, end };
+  }, [dateRangeType, customStartDate, customEndDate]);
+
+  // Date check helper
+  const isWithinDateRange = (isoString: string, startStr: string, endStr: string) => {
+    if (!startStr && !endStr) return true;
+    try {
+      const msgDate = new Date(isoString.replace(" ", "T"));
+      msgDate.setHours(0, 0, 0, 0);
+
+      if (startStr) {
+        const startDate = new Date(startStr);
+        startDate.setHours(0, 0, 0, 0);
+        if (msgDate < startDate) return false;
+      }
+      if (endStr) {
+        const endDate = new Date(endStr);
+        endDate.setHours(0, 0, 0, 0);
+        if (msgDate > endDate) return false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  };
+
   // Detect URL patterns
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 
@@ -109,11 +171,22 @@ function FeedContent() {
     return urlRegex.test(msg.content || "");
   };
 
-  // Group messages into Conversations
+  // 1. Filter ALL messages by integration ID and date range first
+  const filteredMessages = useMemo(() => {
+    return messages.filter((msg) => {
+      const matchIntegration = selectedIntegration ? msg.integration_id === selectedIntegration : true;
+      if (!matchIntegration) return false;
+
+      const matchDate = isWithinDateRange(msg.created_at, dateRangeBounds.start, dateRangeBounds.end);
+      return matchDate;
+    });
+  }, [messages, selectedIntegration, dateRangeBounds]);
+
+  // 2. Group the filtered messages into Conversations
   const conversations = useMemo(() => {
     const groups: Record<string, Conversation> = {};
 
-    messages.forEach((msg) => {
+    filteredMessages.forEach((msg) => {
       const chatKey = `${msg.chat_name}_${msg.integration_id}`;
       if (!groups[chatKey]) {
         groups[chatKey] = {
@@ -133,17 +206,32 @@ function FeedContent() {
     return Object.values(groups).sort(
       (a, b) => new Date(b.latestMessage.created_at).getTime() - new Date(a.latestMessage.created_at).getTime()
     );
-  }, [messages]);
+  }, [filteredMessages]);
 
-  // Filter conversations by search query and integration dropdown
-  const filteredConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      const matchQuery = c.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
-                         c.integrationName.toLowerCase().includes(chatSearchQuery.toLowerCase());
-      const matchIntegration = selectedIntegration ? c.integrationId === selectedIntegration : true;
-      return matchQuery && matchIntegration;
-    });
-  }, [conversations, chatSearchQuery, selectedIntegration]);
+  // 3. Search Conversations by Chat Name OR Message Contents (WhatsApp Web style)
+  const searchedConversations = useMemo(() => {
+    if (!chatSearchQuery.trim()) {
+      return conversations.map(c => ({ ...c, matchChatName: true, matchedMessages: [] }));
+    }
+
+    const query = chatSearchQuery.toLowerCase().trim();
+
+    return conversations.map((c) => {
+      const matchChatName = c.chatName.toLowerCase().includes(query);
+      
+      const matchedMessages = c.messages.filter((msg) => 
+        msg.message_type === "text" && 
+        msg.content && 
+        msg.content.toLowerCase().includes(query)
+      );
+
+      return {
+        ...c,
+        matchChatName,
+        matchedMessages,
+      };
+    }).filter((c) => c.matchChatName || (c.matchedMessages && c.matchedMessages.length > 0));
+  }, [conversations, chatSearchQuery]);
 
   // Find currently active conversation
   const activeConversation = useMemo(() => {
@@ -214,25 +302,63 @@ function FeedContent() {
     }
   };
 
-  const renderTextContent = (text: string) => {
-    const parts = text.split(urlRegex);
+  // Helper to parse URLs AND highlight search query keywords
+  const renderTextContent = (text: string, searchKey: string) => {
+    if (!searchKey.trim()) {
+      const parts = text.split(urlRegex);
+      return parts.map((part, i) => {
+        if (part.match(urlRegex)) {
+          const url = part.startsWith("www.") ? `https://${part}` : part;
+          return (
+            <a
+              key={i}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline break-all font-bold"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      });
+    }
+
+    const query = searchKey.trim();
+    const escapedSearch = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const highlightRegex = new RegExp(`(${escapedSearch})`, "gi");
+    
+    const parts = text.split(highlightRegex);
     return parts.map((part, i) => {
-      if (part.match(urlRegex)) {
-        const url = part.startsWith("www.") ? `https://${part}` : part;
+      if (part.toLowerCase() === query.toLowerCase()) {
         return (
-          <a
-            key={i}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline break-all font-bold"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <mark key={i} className="bg-yellow-250 dark:bg-yellow-500/30 text-yellow-950 dark:text-yellow-100 rounded px-0.5 font-bold">
             {part}
-          </a>
+          </mark>
         );
       }
-      return part;
+      
+      const urlParts = part.split(urlRegex);
+      return urlParts.map((urlPart, j) => {
+        if (urlPart.match(urlRegex)) {
+          const url = urlPart.startsWith("www.") ? `https://${urlPart}` : urlPart;
+          return (
+            <a
+              key={`${i}-${j}`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline break-all font-bold"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {urlPart}
+            </a>
+          );
+        }
+        return urlPart;
+      });
     });
   };
 
@@ -265,13 +391,13 @@ function FeedContent() {
           {/* 1. Left Sidebar: Chat List */}
           <div className="lg:col-span-4 border-r border-slate-200/60 dark:border-slate-800/80 flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/20">
             {/* Search, Filter & Refresh Bar */}
-            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 shrink-0 space-y-2">
+            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 shrink-0 space-y-2 bg-slate-50/50 dark:bg-slate-950/10">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
                   <input
                     type="text"
-                    placeholder="Cari chat atau grup..."
+                    placeholder="Cari chat, grup, atau isi pesan..."
                     value={chatSearchQuery}
                     onChange={(e) => setChatSearchQuery(e.target.value)}
                     className="w-full h-9.5 pl-9.5 pr-4 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 transition"
@@ -288,24 +414,77 @@ function FeedContent() {
                 </button>
               </div>
 
-              {/* Integration Dropdown Filter */}
-              <div>
-                <select
-                  value={selectedIntegration}
-                  onChange={(e) => {
-                    setSelectedIntegration(e.target.value);
-                    setActiveChatKey(null);
-                  }}
-                  className="w-full h-8.5 px-3 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-355 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  <option value="">Semua Akun / Bot</option>
-                  {integrations.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+              {/* Filters grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Integration filter */}
+                <div>
+                  <label className="text-[8px] font-black text-slate-450 dark:text-slate-500 uppercase block mb-1">Akun / Bot</label>
+                  <select
+                    value={selectedIntegration}
+                    onChange={(e) => {
+                      setSelectedIntegration(e.target.value);
+                      setActiveChatKey(null);
+                    }}
+                    className="w-full h-8 px-2 rounded-lg text-[10px] font-bold text-slate-650 dark:text-slate-355 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">Semua Akun</option>
+                    {integrations.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date range picker */}
+                <div>
+                  <label className="text-[8px] font-black text-slate-455 dark:text-slate-500 uppercase block mb-1">Rentang Waktu</label>
+                  <select
+                    value={dateRangeType}
+                    onChange={(e) => {
+                      setDateRangeType(e.target.value);
+                      setActiveChatKey(null);
+                    }}
+                    className="w-full h-8 px-2 rounded-lg text-[10px] font-bold text-slate-650 dark:text-slate-355 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="all">Semua Waktu</option>
+                    <option value="today">Hari Ini</option>
+                    <option value="week">7 Hari Terakhir</option>
+                    <option value="month">30 Hari Terakhir</option>
+                    <option value="custom">Kustom Tanggal...</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Custom Date Inputs */}
+              {dateRangeType === "custom" && (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/50 dark:border-slate-850 animate-in fade-in duration-200">
+                  <div>
+                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase block mb-1">Dari</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => {
+                        setCustomStartDate(e.target.value);
+                        setActiveChatKey(null);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase block mb-1">Sampai</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => {
+                        setCustomEndDate(e.target.value);
+                        setActiveChatKey(null);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* List */}
@@ -315,13 +494,21 @@ function FeedContent() {
                   <div className="h-6 w-6 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
                   <p className="text-[10px] font-semibold text-slate-450">Memuat chat room...</p>
                 </div>
-              ) : filteredConversations.length === 0 ? (
-                <p className="text-center text-xs font-bold text-slate-400 py-10">
-                  {chatSearchQuery || selectedIntegration ? "Tidak ada chat yang cocok" : "Belum ada riwayat chat"}
+              ) : searchedConversations.length === 0 ? (
+                <p className="text-center text-xs font-bold text-slate-455 py-10">
+                  {chatSearchQuery || selectedIntegration || dateRangeType !== "all" 
+                    ? "Tidak ada obrolan/isi pesan cocok" 
+                    : "Belum ada riwayat chat"}
                 </p>
               ) : (
-                filteredConversations.map((item) => {
+                searchedConversations.map((item) => {
                   const isActive = item.chatKey === activeChatKey;
+                  
+                  // Decide what preview message to render: 
+                  // If matching search query in messages, show the first matched message snippet!
+                  const hasMatchSnippet = chatSearchQuery.trim() && item.matchedMessages && item.matchedMessages.length > 0;
+                  const previewMsg = hasMatchSnippet ? item.matchedMessages![0] : item.latestMessage;
+
                   return (
                     <button
                       key={item.chatKey}
@@ -348,10 +535,15 @@ function FeedContent() {
                         </div>
                         
                         <div className="flex items-center justify-between gap-1.5">
-                          <p className="text-[10px] text-slate-500 dark:text-slate-450 truncate flex-1 leading-snug">
-                            {item.latestMessage.message_type === "text" 
-                              ? item.latestMessage.content 
-                              : `[${item.latestMessage.message_type.toUpperCase()}] ${item.latestMessage.content}`}
+                          <p className={`text-[10px] truncate flex-1 leading-snug ${
+                            hasMatchSnippet 
+                              ? "text-blue-600 dark:text-blue-400 font-bold" 
+                              : "text-slate-505 dark:text-slate-450"
+                          }`}>
+                            {hasMatchSnippet && <span className="text-[8px] uppercase tracking-wider font-black mr-1 bg-blue-100 dark:bg-blue-900/50 px-1 py-0.2 rounded">Cocok</span>}
+                            {previewMsg.message_type === "text" 
+                              ? previewMsg.content 
+                              : `[${previewMsg.message_type.toUpperCase()}] ${previewMsg.content}`}
                           </p>
                           
                           <span className="text-[8px] font-bold text-slate-400 flex items-center gap-0.5 shrink-0 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
@@ -375,13 +567,13 @@ function FeedContent() {
           <div className="lg:col-span-8 flex flex-col h-full bg-slate-50/20 dark:bg-slate-900/10">
             {activeConversation ? (
               <>
-                {/* Chat Room Header */}
+                {/* Chat Header */}
                 <div className="px-5 py-3 border-b border-slate-200/60 dark:border-slate-800/80 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                   <div>
                     <h3 className="text-sm font-black text-slate-800 dark:text-slate-200">
                       {activeConversation.chatName}
                     </h3>
-                    <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5">
+                    <p className="text-[10px] font-semibold text-slate-450 dark:text-slate-500 mt-0.5">
                       Integrasi: <span className="capitalize">{activeConversation.provider}</span> ({activeConversation.integrationName}) &bull; {activeConversation.messages.length} Pesan
                     </p>
                   </div>
@@ -393,7 +585,7 @@ function FeedContent() {
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                         messageFilterTab === "all"
                           ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                          : "text-slate-550 dark:text-slate-400 hover:text-slate-700"
                       }`}
                     >
                       Semua
@@ -403,7 +595,7 @@ function FeedContent() {
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                         messageFilterTab === "files"
                           ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                          : "text-slate-550 dark:text-slate-400 hover:text-slate-700"
                       }`}
                     >
                       Media & File
@@ -413,7 +605,7 @@ function FeedContent() {
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
                         messageFilterTab === "links"
                           ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm"
-                          : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                          : "text-slate-550 dark:text-slate-400 hover:text-slate-700"
                       }`}
                     >
                       Tautan
@@ -446,7 +638,7 @@ function FeedContent() {
                             </div>
                           )}
 
-                          <div className="flex items-start gap-2.5 max-w-xl group">
+                          <div className="flex items-start gap-2.5 max-w-xl group animate-in fade-in slide-in-from-bottom-1 duration-150">
                             <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-sm ${getAvatarBg(msg.sender_name)}`}>
                               {getInitials(msg.sender_name)}
                             </div>
@@ -460,7 +652,7 @@ function FeedContent() {
                                 <div className="text-[11.5px] leading-relaxed">
                                   {msg.message_type === "text" && (
                                     <p className="text-slate-700 dark:text-slate-300 font-semibold whitespace-pre-wrap">
-                                      {renderTextContent(msg.content || "")}
+                                      {renderTextContent(msg.content || "", chatSearchQuery)}
                                     </p>
                                   )}
 
@@ -521,7 +713,7 @@ function FeedContent() {
                                       className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100/50 dark:hover:bg-slate-850 border border-slate-200/50 dark:border-slate-800 rounded-xl transition group/doc cursor-pointer max-w-xs"
                                     >
                                       <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+                                        <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-400 flex items-center justify-center shrink-0">
                                           <i className="fa-regular fa-file-lines text-sm"></i>
                                         </div>
                                         <div className="min-w-0">
