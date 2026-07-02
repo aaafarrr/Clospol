@@ -77,9 +77,9 @@ git clone https://github.com/aaafarrr/Clospol.git
 cd Clospol
 ```
 
-### 2. Install Dependencies
+### 2. Install Dependencies & Initialize Database
 
-Install npm modules using the clean install command:
+Install npm modules. The database schema will automatically initialize or synchronize safely via a `postinstall` script:
 
 ```bash
 npm install
@@ -99,13 +99,26 @@ Open `.env` and fill in the necessary configurations:
 - `JWT_ACCESS_SECRET`: Secret token used for signing authentication cookies.
 - OAuth Client Credentials for Google Drive, OneDrive, and Dropbox (configured via settings panel later or preset).
 
-### 4. Database Setup & Push Schema
+### 4. Database Helper Commands
 
-Synchronize the Drizzle schemas with the local SQLite database:
+If the database is already initialized and you need to perform manual schema actions, the following shorthand commands are available:
 
-```bash
-npx drizzle-kit push
-```
+- **Manual Push Schema** (runs standard schema push with interactive prompts):
+  ```bash
+  npm run db:push
+  ```
+- **Force Push Schema** (bypasses interactive prompts and auto-approves destructive changes):
+  ```bash
+  npm run db:push:force
+  ```
+- **Reset Database** (removes SQLite database files and regenerates schema from scratch):
+  ```bash
+  npm run db:reset
+  ```
+- **Database Studio UI** (launches visual database explorer in browser):
+  ```bash
+  npm run db:studio
+  ```
 
 ### 5. Launch the Application
 
