@@ -339,7 +339,7 @@ export class CctvService {
         "-i", camera.streamUrl,
         "-t", String(durationSeconds),
         "-c:v", "copy",
-        "-c:a", "aac",
+        "-an",
         tempFilePath
       );
 
