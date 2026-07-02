@@ -48,9 +48,61 @@ export async function POST(req: NextRequest) {
 
     let restartRequired = false;
 
-    // 1. Restore config
+    // 1. Parse backup env if present to resolve credentials keys
+    const backupEnvEntry = zip.getEntry(".env");
+    const backupEnvContent = backupEnvEntry ? backupEnvEntry.getData().toString("utf8") : "";
+    const backupAppKeyMatch = backupEnvContent.match(/^APP_KEY\s*=\s*(.*)$/m);
+    const backupAppKey = backupAppKeyMatch ? backupAppKeyMatch[1].trim() : "";
+
+    const envPath = path.resolve(".env");
+    let serverEnvContent = "";
+    if (fs.existsSync(envPath)) {
+      serverEnvContent = fs.readFileSync(envPath, "utf8");
+    }
+
+    let updatedEnv = serverEnvContent;
+
     if (restoreEnv && hasEnv) {
-      zip.extractEntryTo(".env", "./", false, true);
+      // Merge configuration instead of plain overwrite to preserve host specific domains/ports
+      const backupLines = backupEnvContent.split(/\r?\n/);
+      for (const line of backupLines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+          const parts = trimmed.split("=");
+          const key = parts[0].trim();
+          const val = parts.slice(1).join("=").trim();
+          
+          if (key === "APP_KEY" && restoreDb && backupAppKey) {
+            // Overwrite APP_KEY if database is restored
+            if (updatedEnv.match(new RegExp(`^${key}\\s*=`, "m"))) {
+              updatedEnv = updatedEnv.replace(new RegExp(`^${key}\\s*=.*$`, "m"), `${key}=${backupAppKey}`);
+            } else {
+              updatedEnv += `\n${key}=${backupAppKey}\n`;
+            }
+          } else {
+            // Add new variables only if they don't already exist on the server
+            const keyRegex = new RegExp(`^${key}\\s*=`, "m");
+            if (!updatedEnv.match(keyRegex)) {
+              updatedEnv += `\n${key}=${val}\n`;
+            }
+          }
+        }
+      }
+      restartRequired = true;
+    } else if (restoreDb && hasDb && backupAppKey) {
+      // Even if user does NOT restore configuration, if we restore the database we MUST
+      // automatically sync the APP_KEY to match the database for encryption/decryption.
+      const key = "APP_KEY";
+      if (updatedEnv.match(new RegExp(`^${key}\\s*=`, "m"))) {
+        updatedEnv = updatedEnv.replace(new RegExp(`^${key}\\s*=.*$`, "m"), `${key}=${backupAppKey}`);
+      } else {
+        updatedEnv += `\n${key}=${backupAppKey}\n`;
+      }
+      restartRequired = true;
+    }
+
+    if (updatedEnv !== serverEnvContent) {
+      fs.writeFileSync(envPath, updatedEnv, "utf8");
     }
 
     // 2. Restore local files
