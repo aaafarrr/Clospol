@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "node scripts/db-setup.js",
+    "postinstall": "node -e \"if (require('fs').existsSync('scripts/db-setup.js')) require('child_process').execSync('node scripts/db-setup.js', { stdio: 'inherit' })\"",
     "db:push": "drizzle-kit push",
     "db:push:force": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",
