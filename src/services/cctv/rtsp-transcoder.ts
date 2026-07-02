@@ -62,10 +62,12 @@ export class RtspTranscoderService {
       "-hls_list_size", "3",
       "-hls_flags", "delete_segments",
       "-f", "hls",
-      relativePlaylistPath
+      `file:${playlistPath}`
     ];
 
+
     console.log(`[Transcoder] Spawning FFmpeg for camera ${cameraId}. Path: ${ffmpegInstaller.path}`);
+
 
     const child = spawn(ffmpegInstaller.path, ffmpegArgs, {
       stdio: ["ignore", "ignore", "pipe"], // pipe stderr for log messages, ignore stdin/stdout
