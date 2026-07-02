@@ -45,6 +45,94 @@ export default function IntegrationsPage() {
 
   const toast = useToast();
 
+  const [editingIntegration, setEditingIntegration] = useState<IntegrationItem | null>(null);
+
+  const startEditIntegration = (item: IntegrationItem) => {
+    setEditingIntegration(item);
+    if (item.provider === "telegram") {
+      setCurrentForm("telegram");
+      setTelegramForm({ name: item.integrationName, botToken: "", accountId: "routing_policy" });
+    } else if (item.provider === "discord") {
+      setCurrentForm("discord");
+      setDiscordForm({ name: item.integrationName, botToken: "", accountId: "routing_policy" });
+    } else if (item.provider === "slack") {
+      setCurrentForm("slack");
+      setSlackForm({ name: item.integrationName, botToken: "", accountId: "routing_policy" });
+    } else if (item.provider === "whatsapp") {
+      setCurrentForm("whatsapp_un");
+      setWaUnForm({ name: item.integrationName, accountId: "routing_policy" });
+    } else if (item.provider === "whatsapp_official") {
+      setCurrentForm("whatsapp");
+      setWaOfficialForm({ name: item.integrationName, phoneNumberId: "", accessToken: "", verifyToken: "", accountId: "routing_policy" });
+    }
+    showToast(`Mengedit integrasi: ${item.integrationName}`, "info");
+  };
+
+  const cancelEditIntegration = () => {
+    setEditingIntegration(null);
+    setTelegramForm({ name: "", botToken: "", accountId: "routing_policy" });
+    setDiscordForm({ name: "", botToken: "", accountId: "routing_policy" });
+    setSlackForm({ name: "", botToken: "", accountId: "routing_policy" });
+    setWaUnForm({ name: "", accountId: "routing_policy" });
+    setWaOfficialForm({ name: "", phoneNumberId: "", accessToken: "", verifyToken: "", accountId: "routing_policy" });
+  };
+
+  const changeFormTab = (tab: "telegram" | "discord" | "slack" | "whatsapp_un" | "whatsapp") => {
+    cancelEditIntegration();
+    setCurrentForm(tab);
+  };
+
+  const refreshIntegrationStatus = async (item: IntegrationItem) => {
+    showToast(`Menyegarkan status ${item.integrationName}...`, "info");
+    if (item.provider === "whatsapp" && item.sessionId) {
+      try {
+        const res = await fetch(`/api/integrations/${item.sessionId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveStatuses((prev) => ({ ...prev, [item.id]: data.status }));
+          showToast(`Status WhatsApp: ${data.status.replace("_", " ")}`, "success");
+        } else {
+          showToast("Gagal mengambil status WhatsApp.", "error");
+        }
+      } catch (_) {
+        showToast("Error mengambil status WhatsApp.", "error");
+      }
+    } else {
+      await loadData();
+      showToast("Status integrasi disegarkan.", "success");
+    }
+  };
+
+  const handleUpdateIntegration = async (id: string, name: string, botToken?: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/integrations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integrationName: name,
+          botToken,
+        }),
+      });
+      if (res.ok) {
+        showToast("Integrasi berhasil diperbarui.", "success");
+        cancelEditIntegration();
+        loadData();
+        return true;
+      } else {
+        const data = await res.json();
+        showToast("Gagal memperbarui: " + (data.error || "Unknown"), "error");
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Gagal memperbarui integrasi.", "error");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "success") => {
     toast.toast(message, type);
   };
@@ -260,34 +348,56 @@ export default function IntegrationsPage() {
 
   const saveTelegram = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await handleSaveIntegration("telegram", telegramForm.name, telegramForm.botToken);
-    if (success) setTelegramForm({ name: "", botToken: "", accountId: "routing_policy" });
+    if (editingIntegration) {
+      await handleUpdateIntegration(editingIntegration.id, telegramForm.name, telegramForm.botToken);
+    } else {
+      const success = await handleSaveIntegration("telegram", telegramForm.name, telegramForm.botToken);
+      if (success) setTelegramForm({ name: "", botToken: "", accountId: "routing_policy" });
+    }
   };
 
   const saveDiscord = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await handleSaveIntegration("discord", discordForm.name, discordForm.botToken);
-    if (success) setDiscordForm({ name: "", botToken: "", accountId: "routing_policy" });
+    if (editingIntegration) {
+      await handleUpdateIntegration(editingIntegration.id, discordForm.name, discordForm.botToken);
+    } else {
+      const success = await handleSaveIntegration("discord", discordForm.name, discordForm.botToken);
+      if (success) setDiscordForm({ name: "", botToken: "", accountId: "routing_policy" });
+    }
   };
 
   const saveSlack = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await handleSaveIntegration("slack", slackForm.name, slackForm.botToken);
-    if (success) setSlackForm({ name: "", botToken: "", accountId: "routing_policy" });
+    if (editingIntegration) {
+      await handleUpdateIntegration(editingIntegration.id, slackForm.name, slackForm.botToken);
+    } else {
+      const success = await handleSaveIntegration("slack", slackForm.name, slackForm.botToken);
+      if (success) setSlackForm({ name: "", botToken: "", accountId: "routing_policy" });
+    }
   };
 
   const saveWhatsAppUnofficial = async (e: React.FormEvent) => {
     e.preventDefault();
-    const sessId = `wa_session_${Math.random().toString(36).substring(2, 10)}`;
-    const success = await handleSaveIntegration("whatsapp", waUnForm.name, "", sessId);
-    if (success) setWaUnForm({ name: "", accountId: "routing_policy" });
+    if (editingIntegration) {
+      await handleUpdateIntegration(editingIntegration.id, waUnForm.name);
+    } else {
+      const sessId = `wa_session_${Math.random().toString(36).substring(2, 10)}`;
+      const success = await handleSaveIntegration("whatsapp", waUnForm.name, "", sessId);
+      if (success) setWaUnForm({ name: "", accountId: "routing_policy" });
+    }
   };
 
   const saveWhatsAppOfficial = async (e: React.FormEvent) => {
     e.preventDefault();
-    const compositeToken = `${waOfficialForm.phoneNumberId}:${waOfficialForm.accessToken}:${waOfficialForm.verifyToken}`;
-    const success = await handleSaveIntegration("whatsapp_official", waOfficialForm.name, compositeToken);
-    if (success) setWaOfficialForm({ name: "", phoneNumberId: "", accessToken: "", verifyToken: "", accountId: "routing_policy" });
+    if (editingIntegration) {
+      const hasNewToken = waOfficialForm.phoneNumberId || waOfficialForm.accessToken || waOfficialForm.verifyToken;
+      const compositeToken = `${waOfficialForm.phoneNumberId}:${waOfficialForm.accessToken}:${waOfficialForm.verifyToken}`;
+      await handleUpdateIntegration(editingIntegration.id, waOfficialForm.name, hasNewToken ? compositeToken : undefined);
+    } else {
+      const compositeToken = `${waOfficialForm.phoneNumberId}:${waOfficialForm.accessToken}:${waOfficialForm.verifyToken}`;
+      const success = await handleSaveIntegration("whatsapp_official", waOfficialForm.name, compositeToken);
+      if (success) setWaOfficialForm({ name: "", phoneNumberId: "", accessToken: "", verifyToken: "", accountId: "routing_policy" });
+    }
   };
 
   // Close modal when clicking outside
@@ -537,8 +647,23 @@ export default function IntegrationsPage() {
                               <span>Lihat File</span>
                             </Link>
                             <button 
+                              onClick={() => refreshIntegrationStatus(item)} 
+                              className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                              title="Refresh Status"
+                            >
+                              <i className="fa-solid fa-rotate text-sm"></i>
+                            </button>
+                            <button 
+                              onClick={() => startEditIntegration(item)} 
+                              className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                              title="Edit"
+                            >
+                              <i className="fa-solid fa-pen text-sm"></i>
+                            </button>
+                            <button 
                               onClick={() => deleteIntegration(item.id)} 
                               className="rounded-lg p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-400 hover:text-red-600 transition cursor-pointer"
+                              title="Delete"
                             >
                               <i className="fa-solid fa-trash-can text-sm"></i>
                             </button>
@@ -585,21 +710,36 @@ export default function IntegrationsPage() {
           {/* Right Column: Forms & Tutorials */}
           <div className="space-y-6">
             <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-5 shadow-sm space-y-4">
-              <div>
-                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">Add Integration</h2>
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1">Connect a new messenger account</p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">
+                    {editingIntegration ? "Edit Integration" : "Add Integration"}
+                  </h2>
+                  <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mt-1">
+                    {editingIntegration ? `Updating: ${editingIntegration.integrationName}` : "Connect a new messenger account"}
+                  </p>
+                </div>
+                {editingIntegration && (
+                  <button
+                    type="button"
+                    onClick={cancelEditIntegration}
+                    className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-250 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 text-[10px] font-extrabold transition cursor-pointer"
+                  >
+                    Batal Edit
+                  </button>
+                )}
               </div>
 
               {/* Form Tabs */}
               <div className="flex flex-col bg-slate-100 dark:bg-slate-950 p-1 rounded-xl gap-1 text-[10px] font-bold">
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => setCurrentForm("telegram")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'telegram' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-telegram text-sky-500"></i> Telegram</button>
-                  <button type="button" onClick={() => setCurrentForm("discord")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'discord' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-discord text-indigo-500"></i> Discord</button>
-                  <button type="button" onClick={() => setCurrentForm("slack")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'slack' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-slack text-amber-500"></i> Slack</button>
+                  <button type="button" onClick={() => changeFormTab("telegram")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'telegram' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-telegram text-sky-500"></i> Telegram</button>
+                  <button type="button" onClick={() => changeFormTab("discord")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'discord' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-discord text-indigo-500"></i> Discord</button>
+                  <button type="button" onClick={() => changeFormTab("slack")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'slack' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-slack text-amber-500"></i> Slack</button>
                 </div>
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => setCurrentForm("whatsapp_un")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'whatsapp_un' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-whatsapp text-teal-500"></i> WA Unofficial</button>
-                  <button type="button" onClick={() => setCurrentForm("whatsapp")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'whatsapp' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-whatsapp text-emerald-500"></i> WA Official</button>
+                  <button type="button" onClick={() => changeFormTab("whatsapp_un")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'whatsapp_un' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-whatsapp text-teal-500"></i> WA Unofficial</button>
+                  <button type="button" onClick={() => changeFormTab("whatsapp")} className={`flex-1 py-1.5 text-center rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${currentForm === 'whatsapp' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm' : 'text-slate-400'}`}><i className="fa-brands fa-whatsapp text-emerald-500"></i> WA Official</button>
                 </div>
               </div>
 
@@ -624,13 +764,13 @@ export default function IntegrationsPage() {
                         type="text" 
                         value={telegramForm.botToken} 
                         onChange={(e) => setTelegramForm({ ...telegramForm, botToken: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="123456789:ABCdefGhI..." 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none"
                       />
                     </div>
                     <button type="submit" disabled={loading} className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 disabled:opacity-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                      <span>Add Telegram Bot</span>
+                      <span>{editingIntegration ? "Simpan Perubahan" : "Add Telegram Bot"}</span>
                     </button>
                   </form>
 
@@ -688,13 +828,13 @@ export default function IntegrationsPage() {
                         type="password" 
                         value={discordForm.botToken} 
                         onChange={(e) => setDiscordForm({ ...discordForm, botToken: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="e.g. MTY3OTI0..." 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none font-mono"
                       />
                     </div>
                     <button type="submit" disabled={loading} className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-500/10 disabled:opacity-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                      <span>Add Discord Bot</span>
+                      <span>{editingIntegration ? "Simpan Perubahan" : "Add Discord Bot"}</span>
                     </button>
                   </form>
 
@@ -750,13 +890,13 @@ export default function IntegrationsPage() {
                         type="text" 
                         value={slackForm.botToken} 
                         onChange={(e) => setSlackForm({ ...slackForm, botToken: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="xoxb-..." 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none"
                       />
                     </div>
                     <button type="submit" disabled={loading} className="w-full h-10 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md shadow-amber-500/10 disabled:opacity-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                      <span>Add Slack Bot</span>
+                      <span>{editingIntegration ? "Simpan Perubahan" : "Add Slack Bot"}</span>
                     </button>
                   </form>
 
@@ -817,7 +957,7 @@ export default function IntegrationsPage() {
                       />
                     </div>
                     <button type="submit" disabled={loading} className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow-md shadow-teal-500/10 disabled:opacity-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                      <span>Create WhatsApp Session</span>
+                      <span>{editingIntegration ? "Simpan Perubahan" : "Create WhatsApp Session"}</span>
                     </button>
                   </form>
 
@@ -870,7 +1010,7 @@ export default function IntegrationsPage() {
                         type="text" 
                         value={waOfficialForm.phoneNumberId} 
                         onChange={(e) => setWaOfficialForm({ ...waOfficialForm, phoneNumberId: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="e.g. 10623..." 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none"
                       />
@@ -881,7 +1021,7 @@ export default function IntegrationsPage() {
                         type="text" 
                         value={waOfficialForm.accessToken} 
                         onChange={(e) => setWaOfficialForm({ ...waOfficialForm, accessToken: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="EAAG..." 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none"
                       />
@@ -892,13 +1032,13 @@ export default function IntegrationsPage() {
                         type="text" 
                         value={waOfficialForm.verifyToken} 
                         onChange={(e) => setWaOfficialForm({ ...waOfficialForm, verifyToken: e.target.value })} 
-                        required 
+                        required={!editingIntegration} 
                         placeholder="Verify Token of choice" 
                         className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-xs font-semibold bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 outline-none font-mono"
                       />
                     </div>
                     <button type="submit" disabled={loading} className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/10 disabled:opacity-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                      <span>Add WhatsApp Config</span>
+                      <span>{editingIntegration ? "Simpan Perubahan" : "Add WhatsApp Config"}</span>
                     </button>
                   </form>
 
