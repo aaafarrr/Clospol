@@ -143,6 +143,60 @@ export async function POST(req: NextRequest) {
           fs.renameSync(extractedPath, targetDbPath);
         }
       }
+
+      // Map and update the user ID inside the restored database file
+      try {
+        const DatabaseConstructor = require("better-sqlite3");
+        const tempDb = new DatabaseConstructor(targetDbPath);
+        try {
+          let oldUserId: string | null = null;
+          
+          // Try finding old user ID by email first
+          const userRow = tempDb.prepare("SELECT id FROM users WHERE email = ?").get(user.email);
+          if (userRow) {
+            oldUserId = userRow.id;
+          } else {
+            // Fallback: if there is only 1 user, use that
+            const usersList = tempDb.prepare("SELECT id FROM users").all();
+            if (usersList.length === 1) {
+              oldUserId = usersList[0].id;
+            } else if (usersList.length > 0) {
+              oldUserId = usersList[0].id;
+            }
+          }
+
+          if (oldUserId && oldUserId !== user.id) {
+            console.log(`[Restore] Mapping database records from user ID ${oldUserId} to active user ID ${user.id}...`);
+            const tables = tempDb.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+            
+            tempDb.transaction(() => {
+              for (const tbl of tables) {
+                const tableName = tbl.name;
+                if (tableName === "sqlite_sequence") continue;
+                
+                const columns = tempDb.prepare(`PRAGMA table_info(${tableName})`).all();
+                for (const col of columns) {
+                  const colName = col.name;
+                  if (
+                    (tableName === "users" && colName === "id") ||
+                    (colName === "user_id") ||
+                    (colName === "inviter_id")
+                  ) {
+                    tempDb.prepare(`UPDATE ${tableName} SET ${colName} = ? WHERE ${colName} = ?`).run(user.id, oldUserId);
+                  }
+                }
+              }
+            })();
+            console.log("[Restore] User ID mapping completed successfully.");
+          }
+        } catch (mapErr: any) {
+          console.error("[Restore] Error mapping user ID in restored database:", mapErr.message);
+        } finally {
+          tempDb.close();
+        }
+      } catch (loadErr: any) {
+        console.error("[Restore] Failed to initialize better-sqlite3 for mapping:", loadErr.message);
+      }
       
       restartRequired = true;
     }
