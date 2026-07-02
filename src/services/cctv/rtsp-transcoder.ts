@@ -62,7 +62,7 @@ export class RtspTranscoderService {
       "-hls_list_size", "3",
       "-hls_flags", "delete_segments",
       "-f", "hls",
-      `file:${playlistPath}`
+      playlistPath
     ];
 
 
