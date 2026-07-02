@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import PrelineScript from "@/components/PrelineScript";
+import { ToastProvider } from "@/components/providers/toast-provider";
 
 export const metadata: Metadata = {
   title: "Clospol - Multi-Cloud Storage Gateway",
@@ -32,7 +33,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
         <PrelineScript />
       </body>
     </html>
