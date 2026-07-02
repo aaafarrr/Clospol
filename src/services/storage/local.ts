@@ -96,10 +96,43 @@ export class LocalStorageService {
   }
 
   /**
+   * Resolve local file path dynamically to account for server migrations or platform path variations.
+   */
+  static resolveLocalFilePath(file: File): string {
+    let filePath = path.resolve(file.providerFileId);
+    if (!fs.existsSync(filePath)) {
+      try {
+        const { sqlite } = require("@/db");
+        const row = sqlite.prepare(
+          "SELECT server_path FROM local_storage_configs WHERE connected_account_id = ? AND status = 'active'"
+        ).get(file.connectedAccountId);
+        
+        if (row && row.server_path) {
+          const parts = file.providerFileId.split(/[\\/]/);
+          const len = parts.length;
+          if (len >= 3) {
+            const userId = parts[len - 3];
+            const fileId = parts[len - 2];
+            const fileName = parts[len - 1];
+            
+            const resolvedPath = path.join(row.server_path, userId, fileId, fileName);
+            if (fs.existsSync(resolvedPath)) {
+              filePath = resolvedPath;
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn("[LocalStorageService] Dynamic path resolution warning:", err.message);
+      }
+    }
+    return filePath;
+  }
+
+  /**
    * Delete local file and clean up empty parent directories up to 2 levels.
    */
   static async deleteLocalFile(file: File): Promise<void> {
-    const filePath = path.resolve(file.providerFileId);
+    const filePath = this.resolveLocalFilePath(file);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -162,7 +195,7 @@ export class LocalStorageService {
    * Open a readable stream to download or preview a local file.
    */
   static streamLocalFile(file: File): Readable {
-    const filePath = path.resolve(file.providerFileId);
+    const filePath = this.resolveLocalFilePath(file);
     if (!fs.existsSync(filePath)) {
       throw new Error(`The requested file does not exist on local disk.`);
     }
