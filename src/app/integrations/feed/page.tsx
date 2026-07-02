@@ -25,7 +25,7 @@ interface MessageItem {
 }
 
 interface Conversation {
-  chatKey: string; // chatName + "_" + integrationId
+  chatKey: string;
   chatName: string;
   chatType: string;
   provider: string;
@@ -55,6 +55,8 @@ function FeedContent() {
   const initialIntegrationId = searchParams.get("integrationId") || "";
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [integrations, setIntegrations] = useState<{ id: string; name: string }[]>([]);
+  const [selectedIntegration, setSelectedIntegration] = useState(initialIntegrationId);
   const [loading, setLoading] = useState(true);
   const [activeChatKey, setActiveChatKey] = useState<string | null>(null);
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -63,6 +65,18 @@ function FeedContent() {
 
   const toast = useToast();
 
+  // Fetch active integrations list
+  useEffect(() => {
+    fetch("/api/integrations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setIntegrations(data.map((item: any) => ({ id: item.id, name: item.integrationName })));
+        }
+      })
+      .catch((err) => console.error("Error fetching integrations:", err));
+  }, []);
+
   const fetchMessages = () => {
     setLoading(true);
     fetch(`/api/integrations/messages`)
@@ -70,6 +84,7 @@ function FeedContent() {
       .then((data) => {
         if (Array.isArray(data)) {
           setMessages(data);
+          toast.toast("Arsip pesan berhasil disinkronkan", "success");
         } else {
           setMessages([]);
         }
@@ -115,19 +130,20 @@ function FeedContent() {
       groups[chatKey].messages.push(msg);
     });
 
-    // Sort by latest message timestamp descending
     return Object.values(groups).sort(
       (a, b) => new Date(b.latestMessage.created_at).getTime() - new Date(a.latestMessage.created_at).getTime()
     );
   }, [messages]);
 
-  // Filter conversations by left sidebar search query
+  // Filter conversations by search query and integration dropdown
   const filteredConversations = useMemo(() => {
-    return conversations.filter((c) =>
-      c.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
-      c.integrationName.toLowerCase().includes(chatSearchQuery.toLowerCase())
-    );
-  }, [conversations, chatSearchQuery]);
+    return conversations.filter((c) => {
+      const matchQuery = c.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+                         c.integrationName.toLowerCase().includes(chatSearchQuery.toLowerCase());
+      const matchIntegration = selectedIntegration ? c.integrationId === selectedIntegration : true;
+      return matchQuery && matchIntegration;
+    });
+  }, [conversations, chatSearchQuery, selectedIntegration]);
 
   // Find currently active conversation
   const activeConversation = useMemo(() => {
@@ -138,7 +154,6 @@ function FeedContent() {
   const activeChatMessages = useMemo(() => {
     if (!activeConversation) return [];
     
-    // Message list needs to be chronological (oldest to newest) inside the room
     const chronologicalMessages = [...activeConversation.messages].reverse();
 
     if (messageFilterTab === "files") {
@@ -199,7 +214,6 @@ function FeedContent() {
     }
   };
 
-  // Helper to parse URLs inside text messages into clickable links
   const renderTextContent = (text: string) => {
     const parts = text.split(urlRegex);
     return parts.map((part, i) => {
@@ -238,7 +252,7 @@ function FeedContent() {
           </div>
           <Link
             href="/integrations"
-            className="self-start sm:self-auto h-9 px-4 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-350 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition flex items-center gap-1.5 cursor-pointer"
+            className="self-start sm:self-auto h-9 px-4 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-355 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition flex items-center gap-1.5 cursor-pointer"
           >
             <i className="fa-solid fa-arrow-left"></i>
             Kembali
@@ -250,17 +264,47 @@ function FeedContent() {
           
           {/* 1. Left Sidebar: Chat List */}
           <div className="lg:col-span-4 border-r border-slate-200/60 dark:border-slate-800/80 flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/20">
-            {/* Search Bar */}
-            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 shrink-0">
-              <div className="relative">
-                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-450 text-[11px]"></i>
-                <input
-                  type="text"
-                  placeholder="Cari chat atau grup..."
-                  value={chatSearchQuery}
-                  onChange={(e) => setChatSearchQuery(e.target.value)}
-                  className="w-full h-9 pl-9.5 pr-4 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 transition"
-                />
+            {/* Search, Filter & Refresh Bar */}
+            <div className="p-4 border-b border-slate-200/60 dark:border-slate-800/80 shrink-0 space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+                  <input
+                    type="text"
+                    placeholder="Cari chat atau grup..."
+                    value={chatSearchQuery}
+                    onChange={(e) => setChatSearchQuery(e.target.value)}
+                    className="w-full h-9.5 pl-9.5 pr-4 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 transition"
+                  />
+                </div>
+                {/* Refresh button */}
+                <button
+                  onClick={fetchMessages}
+                  disabled={loading}
+                  className="h-9.5 w-9.5 shrink-0 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 text-slate-550 hover:bg-slate-50 dark:hover:bg-slate-900 transition flex items-center justify-center cursor-pointer active:scale-95 disabled:opacity-50"
+                  title="Segarkan Pesan"
+                >
+                  <i className={`fa-solid fa-rotate-right text-xs ${loading ? "animate-spin text-blue-500" : ""}`}></i>
+                </button>
+              </div>
+
+              {/* Integration Dropdown Filter */}
+              <div>
+                <select
+                  value={selectedIntegration}
+                  onChange={(e) => {
+                    setSelectedIntegration(e.target.value);
+                    setActiveChatKey(null);
+                  }}
+                  className="w-full h-8.5 px-3 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-355 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="">Semua Akun / Bot</option>
+                  {integrations.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -273,7 +317,7 @@ function FeedContent() {
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <p className="text-center text-xs font-bold text-slate-400 py-10">
-                  {chatSearchQuery ? "Tidak ada chat yang cocok" : "Belum ada riwayat chat"}
+                  {chatSearchQuery || selectedIntegration ? "Tidak ada chat yang cocok" : "Belum ada riwayat chat"}
                 </p>
               ) : (
                 filteredConversations.map((item) => {
@@ -289,18 +333,16 @@ function FeedContent() {
                         isActive ? "bg-blue-50/40 dark:bg-blue-950/15 border-l-4 border-blue-500 pl-[10px]" : ""
                       }`}
                     >
-                      {/* Avatar initials badge */}
                       <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black text-white shrink-0 shadow-sm ${getAvatarBg(item.chatName)}`}>
                         {getInitials(item.chatName)}
                       </div>
 
-                      {/* Room metadata */}
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center justify-between gap-1.5">
                           <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                             {item.chatName}
                           </h4>
-                          <span className="text-[9px] font-semibold text-slate-400 shrink-0">
+                          <span className="text-[9px] font-semibold text-slate-450 shrink-0">
                             {formatTime(item.latestMessage.created_at)}
                           </span>
                         </div>
@@ -312,7 +354,6 @@ function FeedContent() {
                               : `[${item.latestMessage.message_type.toUpperCase()}] ${item.latestMessage.content}`}
                           </p>
                           
-                          {/* Channel Platform Badge */}
                           <span className="text-[8px] font-bold text-slate-400 flex items-center gap-0.5 shrink-0 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                             {item.provider === "whatsapp" ? (
                               <i className="fa-brands fa-whatsapp text-emerald-500"></i>
@@ -345,8 +386,8 @@ function FeedContent() {
                     </p>
                   </div>
 
-                  {/* Filter Tabs inside Chat (All / Media / Links) */}
-                  <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5.5 rounded-xl self-start sm:self-center shrink-0">
+                  {/* Filter Tabs */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl self-start sm:self-center shrink-0">
                     <button
                       onClick={() => setMessageFilterTab("all")}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
@@ -391,7 +432,6 @@ function FeedContent() {
                     </div>
                   ) : (
                     activeChatMessages.map((msg, index) => {
-                      // Check if we should render a Date header (for new dates)
                       const prevMsg = activeChatMessages[index - 1];
                       const showDateHeader = !prevMsg || 
                         formatFullDate(prevMsg.created_at) !== formatFullDate(msg.created_at);
@@ -400,28 +440,23 @@ function FeedContent() {
                         <div key={msg.id} className="space-y-3">
                           {showDateHeader && (
                             <div className="flex justify-center my-4 shrink-0">
-                              <span className="bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                              <span className="bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-405 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                                 {formatFullDate(msg.created_at)}
                               </span>
                             </div>
                           )}
 
-                          {/* Message Bubble Container (Incoming-styled Left bubbles) */}
                           <div className="flex items-start gap-2.5 max-w-xl group">
-                            {/* Initials Circle */}
                             <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-sm ${getAvatarBg(msg.sender_name)}`}>
                               {getInitials(msg.sender_name)}
                             </div>
 
-                            {/* Message Bubble */}
                             <div className="flex flex-col space-y-1">
                               <div className="bg-white dark:bg-slate-950 border border-slate-200/50 dark:border-slate-850 px-3.5 py-2.5 rounded-2xl rounded-tl-none shadow-sm relative space-y-1.5">
-                                {/* Sender name inside group chat */}
                                 <span className="text-[10px] font-black text-blue-500 block leading-none">
                                   {msg.sender_name}
                                 </span>
 
-                                {/* Message body content */}
                                 <div className="text-[11.5px] leading-relaxed">
                                   {msg.message_type === "text" && (
                                     <p className="text-slate-700 dark:text-slate-300 font-semibold whitespace-pre-wrap">
@@ -498,14 +533,13 @@ function FeedContent() {
                                           </span>
                                         </div>
                                       </div>
-                                      <div className="h-6 w-6 rounded-lg bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-850 text-slate-500 flex items-center justify-center shrink-0 shadow-sm group-hover/doc:bg-blue-500 group-hover/doc:text-white group-hover/doc:border-blue-500 transition">
+                                      <div className="h-6 w-6 rounded-lg bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-850 text-slate-550 flex items-center justify-center shrink-0 shadow-sm group-hover/doc:bg-blue-500 group-hover/doc:text-white group-hover/doc:border-blue-500 transition">
                                         <i className="fa-solid fa-arrow-down text-[10px]"></i>
                                       </div>
                                     </a>
                                   )}
                                 </div>
 
-                                {/* Bubble Footer Timestamp */}
                                 <div className="text-[9px] font-semibold text-slate-400 flex justify-end">
                                   {formatTime(msg.created_at)}
                                 </div>
@@ -519,7 +553,6 @@ function FeedContent() {
                 </div>
               </>
             ) : (
-              // Empty State Splash Screen (No Chat Selected)
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
                 <div className="h-20 w-20 rounded-full bg-blue-500/5 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center border border-blue-500/10">
                   <i className="fa-regular fa-comments text-4xl"></i>
