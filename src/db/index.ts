@@ -8,6 +8,25 @@ import path from 'path';
 export const sqlite = new Database(process.env.DATABASE_PATH || './dev.db');
 export const db = drizzle(sqlite, { schema: { ...schema, ...relations } });
 
+// Dynamically create integration_messages table if not exists
+sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS integration_messages (
+    id TEXT PRIMARY KEY,
+    integration_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    sender_avatar TEXT,
+    chat_name TEXT NOT NULL,
+    chat_type TEXT NOT NULL,
+    message_type TEXT NOT NULL,
+    content TEXT,
+    media_url TEXT,
+    media_size INTEGER,
+    mime_type TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 function acquireDaemonLock(): boolean {
   if (typeof window !== 'undefined') return false;
   const lockDir = path.resolve('storage');

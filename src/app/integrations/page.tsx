@@ -320,13 +320,22 @@ export default function IntegrationsPage() {
               Connect WhatsApp and Telegram accounts to auto-save incoming images and files to your cloud storage
             </p>
           </div>
-          <Link 
-            href="/integrations/gallery"
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap self-start sm:self-center"
-          >
-            <i className="fa-solid fa-images text-base"></i>
-            <span>Lihat File Tersimpan</span>
-          </Link>
+          <div className="flex flex-wrap gap-2 self-start sm:self-center">
+            <Link 
+              href="/integrations/feed"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-250 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 font-bold text-sm shadow-sm transition-all cursor-pointer whitespace-nowrap"
+            >
+              <i className="fa-regular fa-message text-base"></i>
+              <span>Lihat Feed Pesan</span>
+            </Link>
+            <Link 
+              href="/integrations/gallery"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap"
+            >
+              <i className="fa-solid fa-images text-base"></i>
+              <span>Lihat File Tersimpan</span>
+            </Link>
+          </div>
         </div>
 
         {/* Integration Capabilities Card */}
@@ -511,6 +520,14 @@ export default function IntegrationsPage() {
                                 )}
                               </div>
                             )}
+                            <Link
+                              href={`/integrations/feed?integrationId=${item.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-[10px] font-bold shadow-sm transition cursor-pointer shrink-0"
+                              title="Lihat feed pesan masuk"
+                            >
+                              <i className="fa-regular fa-message"></i>
+                              <span>Lihat Feed</span>
+                            </Link>
                             <Link
                               href={`/integrations/gallery?integrationId=${item.id}`}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-[10px] font-bold shadow-sm transition cursor-pointer shrink-0"

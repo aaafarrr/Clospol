@@ -249,7 +249,7 @@ export class MessengerDaemon {
       }
     });
 
-    // Listen for incoming attachment payloads
+    // Listen for incoming message payloads
     sock.ev.on("messages.upsert", async (m) => {
       if (m.type !== "notify") return;
 
@@ -261,28 +261,11 @@ export class MessengerDaemon {
 
         const messageType = Object.keys(realMsg)[0];
         const isMedia = ["imageMessage", "documentMessage", "videoMessage", "audioMessage"].includes(messageType);
-        if (!isMedia) continue;
+        const isText = ["conversation", "extendedTextMessage"].includes(messageType);
 
-        const media = realMsg[messageType];
+        if (!isMedia && !isText) continue;
 
         try {
-          console.log(`[WhatsApp] Downloading media attachment for session: ${sessionId}...`);
-          
-          const cleanMsg = { ...msg, message: realMsg };
-          const buffer = await downloadMediaMessage(
-            cleanMsg,
-            "buffer",
-            {},
-            {
-              logger: pinoLogger as any,
-              reuploadRequest: sock.updateMediaMessage,
-            }
-          );
-
-          if (!buffer || buffer.length === 0) {
-            throw new Error("Empty media attachment buffer downloaded.");
-          }
-
           // Fetch the related Integration profile to know user ID and name
           const integration = await prisma.messengerIntegration.findFirst({
             where: { sessionId, provider: "whatsapp" },
@@ -290,22 +273,6 @@ export class MessengerDaemon {
 
           if (!integration) {
             throw new Error(`Integration profile not found for session: ${sessionId}`);
-          }
-
-          // Resolve target storage destination
-          const storageAccount = await UploadRoutingService.selectRoutingAccount(integration.userId, buffer.length);
-          if (!storageAccount) {
-            throw new Error("No active storage account resolved for bot upload.");
-          }
-
-          const mimeType = media.mimetype || "application/octet-stream";
-          let fileName = media.fileName || "file";
-          if (messageType === "imageMessage" && fileName === "file") {
-            fileName = `image_${msg.key.id}.jpg`;
-          } else if (messageType === "videoMessage" && fileName === "file") {
-            fileName = `video_${msg.key.id}.mp4`;
-          } else if (messageType === "audioMessage" && fileName === "file") {
-            fileName = `audio_${msg.key.id}.mp3`;
           }
 
           const chatJid = msg.key.remoteJid || "";
@@ -322,32 +289,116 @@ export class MessengerDaemon {
             chatName = msg.pushName || chatName;
           }
 
-          // Resolve directory folder structure
-          const folder = await MessengerFolderService.getOrCreateFolderPath(
-            integration.userId,
-            storageAccount,
-            "whatsapp",
-            integration.integrationName,
-            chatType,
-            chatName
-          );
+          const senderName = msg.pushName || msg.key.participant?.split("@")[0] || chatJid.split("@")[0];
 
-          // Stream upload to target storage
-          const stream = Readable.from(buffer);
-          await StorageUploaderService.uploadAndSaveFile(
-            integration.userId,
-            storageAccount,
-            fileName,
-            mimeType,
-            buffer.length,
-            folder.id,
-            stream
-          );
+          if (isText) {
+            let textContent = "";
+            if (messageType === "conversation") {
+              textContent = realMsg.conversation || "";
+            } else if (messageType === "extendedTextMessage") {
+              textContent = realMsg.extendedTextMessage?.text || "";
+            }
 
-          console.log(`[WhatsApp] Media file routed successfully: ${fileName}`);
+            if (textContent.trim()) {
+              const { sqlite } = require("@/db");
+              sqlite.prepare(`
+                INSERT INTO integration_messages (id, integration_id, user_id, sender_name, sender_avatar, chat_name, chat_type, message_type, content, media_url, media_size, mime_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                randomUUID(),
+                integration.id,
+                integration.userId,
+                senderName,
+                null,
+                chatName,
+                chatType,
+                "text",
+                textContent,
+                null,
+                0,
+                "text/plain"
+              );
+            }
+          } else if (isMedia) {
+            console.log(`[WhatsApp] Downloading media attachment for session: ${sessionId}...`);
+            const media = realMsg[messageType];
+            const cleanMsg = { ...msg, message: realMsg };
+            const buffer = await downloadMediaMessage(
+              cleanMsg,
+              "buffer",
+              {},
+              {
+                logger: pinoLogger as any,
+                reuploadRequest: sock.updateMediaMessage,
+              }
+            );
 
+            if (!buffer || buffer.length === 0) {
+              throw new Error("Empty media attachment buffer downloaded.");
+            }
+
+            // Resolve target storage destination
+            const storageAccount = await UploadRoutingService.selectRoutingAccount(integration.userId, buffer.length);
+            if (!storageAccount) {
+              throw new Error("No active storage account resolved for bot upload.");
+            }
+
+            const mimeType = media.mimetype || "application/octet-stream";
+            let fileName = media.fileName || "file";
+            if (messageType === "imageMessage" && fileName === "file") {
+              fileName = `image_${msg.key.id}.jpg`;
+            } else if (messageType === "videoMessage" && fileName === "file") {
+              fileName = `video_${msg.key.id}.mp4`;
+            } else if (messageType === "audioMessage" && fileName === "file") {
+              fileName = `audio_${msg.key.id}.mp3`;
+            }
+
+            // Resolve directory folder structure
+            const folder = await MessengerFolderService.getOrCreateFolderPath(
+              integration.userId,
+              storageAccount,
+              "whatsapp",
+              integration.integrationName,
+              chatType,
+              chatName
+            );
+
+            // Stream upload to target storage
+            const stream = Readable.from(buffer);
+            const uploadedFile = await StorageUploaderService.uploadAndSaveFile(
+              integration.userId,
+              storageAccount,
+              fileName,
+              mimeType,
+              buffer.length,
+              folder.id,
+              stream
+            );
+
+            // Save media record to integration_messages
+            const { sqlite } = require("@/db");
+            sqlite.prepare(`
+              INSERT INTO integration_messages (id, integration_id, user_id, sender_name, sender_avatar, chat_name, chat_type, message_type, content, media_url, media_size, mime_type)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              randomUUID(),
+              integration.id,
+              integration.userId,
+              senderName,
+              null,
+              chatName,
+              chatType,
+              messageType.replace("Message", ""),
+              fileName,
+              `/api/files/${uploadedFile.id}/download?inline=true`,
+              buffer.length,
+              mimeType
+            );
+
+            console.log(`[WhatsApp] Media file routed successfully: ${fileName}`);
+          }
         } catch (err: any) {
-          console.error(`[WhatsApp] Failed to process incoming media: ${err.message}`);
+          console.error(`[WhatsApp] Failed to process incoming message: ${err.message}`);
         }
       }
     });
@@ -416,62 +467,118 @@ export class MessengerDaemon {
     });
 
     client.on("messageCreate", async (message) => {
-      if (message.author.bot || message.attachments.size === 0) return;
+      if (message.author.bot) return;
 
-      console.log(`[Discord] Message with ${message.attachments.size} attachment(s) received.`);
+      try {
+        const integration = await prisma.messengerIntegration.findUnique({
+          where: { id: integrationId },
+        });
 
-      for (const [, attachment] of message.attachments) {
-        try {
-          console.log(`[Discord] Downloading attachment: ${attachment.name}...`);
-          
-          const res = await fetch(attachment.url);
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          
-          const arrayBuffer = await res.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+        if (!integration) throw new Error("Discord integration database entry deleted.");
 
-          const integration = await prisma.messengerIntegration.findUnique({
-            where: { id: integrationId },
-          });
+        const chatType = message.guildId ? "Groups" : "Personal";
+        const chatName = message.guild ? message.guild.name : message.author.username;
+        const senderName = message.author.globalName || message.author.username;
+        const senderAvatar = message.author.avatarURL() || null;
 
-          if (!integration) throw new Error("Discord integration database entry deleted.");
-
-          // Resolve target storage account
-          const storageAccount = await UploadRoutingService.selectRoutingAccount(integration.userId, buffer.length);
-          if (!storageAccount) throw new Error("No active storage account resolved for bot upload.");
-
-          const mimeType = attachment.contentType || "application/octet-stream";
-          const fileName = attachment.name || "file";
-          const chatType = message.guildId ? "Groups" : "Personal";
-          const chatName = message.guild ? message.guild.name : message.author.username;
-
-          // Resolve target virtual folder tree
-          const folder = await MessengerFolderService.getOrCreateFolderPath(
+        // 1. Process text content if present
+        if (message.content && message.content.trim()) {
+          const { sqlite } = require("@/db");
+          sqlite.prepare(`
+            INSERT INTO integration_messages (id, integration_id, user_id, sender_name, sender_avatar, chat_name, chat_type, message_type, content, media_url, media_size, mime_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            randomUUID(),
+            integration.id,
             integration.userId,
-            storageAccount,
-            "discord",
-            integration.integrationName,
+            senderName,
+            senderAvatar,
+            chatName,
             chatType,
-            chatName
+            "text",
+            message.content.trim(),
+            null,
+            0,
+            "text/plain"
           );
-
-          // Upload stream
-          const stream = Readable.from(buffer);
-          await StorageUploaderService.uploadAndSaveFile(
-            integration.userId,
-            storageAccount,
-            fileName,
-            mimeType,
-            buffer.length,
-            folder.id,
-            stream
-          );
-
-          console.log(`[Discord] Attachment uploaded successfully: ${fileName}`);
-
-        } catch (err: any) {
-          console.error(`[Discord] Attachment error: ${err.message}`);
         }
+
+        // 2. Process attachments
+        if (message.attachments.size > 0) {
+          for (const [, attachment] of message.attachments) {
+            try {
+              console.log(`[Discord] Downloading attachment: ${attachment.name}...`);
+              
+              const res = await fetch(attachment.url);
+              if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+              
+              const arrayBuffer = await res.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+
+              // Resolve target storage account
+              const storageAccount = await UploadRoutingService.selectRoutingAccount(integration.userId, buffer.length);
+              if (!storageAccount) throw new Error("No active storage account resolved for bot upload.");
+
+              const mimeType = attachment.contentType || "application/octet-stream";
+              const fileName = attachment.name || "file";
+
+              // Resolve target virtual folder tree
+              const folder = await MessengerFolderService.getOrCreateFolderPath(
+                integration.userId,
+                storageAccount,
+                "discord",
+                integration.integrationName,
+                chatType,
+                chatName
+              );
+
+              // Upload stream
+              const stream = Readable.from(buffer);
+              const uploadedFile = await StorageUploaderService.uploadAndSaveFile(
+                integration.userId,
+                storageAccount,
+                fileName,
+                mimeType,
+                buffer.length,
+                folder.id,
+                stream
+              );
+
+              // Determine media type
+              let msgType = "document";
+              if (mimeType.startsWith("image/")) msgType = "image";
+              else if (mimeType.startsWith("video/")) msgType = "video";
+              else if (mimeType.startsWith("audio/")) msgType = "audio";
+
+              // Save media message
+              const { sqlite } = require("@/db");
+              sqlite.prepare(`
+                INSERT INTO integration_messages (id, integration_id, user_id, sender_name, sender_avatar, chat_name, chat_type, message_type, content, media_url, media_size, mime_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(
+                randomUUID(),
+                integration.id,
+                integration.userId,
+                senderName,
+                senderAvatar,
+                chatName,
+                chatType,
+                msgType,
+                fileName,
+                `/api/files/${uploadedFile.id}/download?inline=true`,
+                buffer.length,
+                mimeType
+              );
+
+              console.log(`[Discord] Attachment uploaded successfully: ${fileName}`);
+
+            } catch (err: any) {
+              console.error(`[Discord] Attachment error: ${err.message}`);
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error(`[Discord] messageCreate processing error: ${err.message}`);
       }
     });
 
