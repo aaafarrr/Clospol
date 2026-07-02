@@ -32,11 +32,14 @@ export async function GET(req: NextRequest) {
 
     // 2. Add dev.db database file if it exists and is selected
     if (includeDb) {
-      const dbPath = path.resolve("dev.db");
+      const dbPath = process.env.DATABASE_PATH 
+        ? path.resolve(process.env.DATABASE_PATH)
+        : path.resolve("dev.db");
       if (fs.existsSync(dbPath)) {
-        zip.addLocalFile(dbPath);
+        zip.addLocalFile(dbPath, "", "dev.db");
       }
     }
+
 
     // 3. Add storage/local directory recursively if it exists and is selected
     if (includeFiles) {

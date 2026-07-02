@@ -70,9 +70,31 @@ export async function POST(req: NextRequest) {
       } catch (dbErr: any) {
         console.warn("[Restore] Database connection close warning:", dbErr.message);
       }
-      zip.extractEntryTo("dev.db", "./", false, true);
+      
+      const targetDbPath = process.env.DATABASE_PATH 
+        ? path.resolve(process.env.DATABASE_PATH)
+        : path.resolve("dev.db");
+      
+      const targetDir = path.dirname(targetDbPath);
+      const targetName = path.basename(targetDbPath);
+      
+      // Extract the "dev.db" file from the ZIP into the target directory
+      zip.extractEntryTo("dev.db", targetDir, false, true);
+      
+      // If the target filename is not "dev.db", rename it accordingly
+      if (targetName !== "dev.db") {
+        const extractedPath = path.join(targetDir, "dev.db");
+        if (fs.existsSync(extractedPath)) {
+          if (fs.existsSync(targetDbPath)) {
+            fs.unlinkSync(targetDbPath);
+          }
+          fs.renameSync(extractedPath, targetDbPath);
+        }
+      }
+      
       restartRequired = true;
     }
+
 
     if (restartRequired) {
       console.log("[Restore] Platform restore complete. Scheduling process exit for restart...");
