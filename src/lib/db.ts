@@ -142,6 +142,12 @@ const buildSelect = (selectArgs: any) => {
 
 function sanitizeData(schemaObj: any, data: any) {
   if (!data) return data;
+
+  // Set defaults for known boolean/numeric columns with NOT NULL constraints that might be missing
+  if (schemaObj.isStarred !== undefined && data.isStarred === undefined) {
+    data.isStarred = 0;
+  }
+
   const sanitized: Record<string, any> = {};
   for (const [k, v] of Object.entries(data)) {
     if (schemaObj[k] !== undefined) {
@@ -160,6 +166,7 @@ function sanitizeData(schemaObj: any, data: any) {
   }
   return sanitized;
 }
+
 
 function convertDates(row: any): any {
   if (!row) return row;
@@ -564,9 +571,34 @@ function createModelAdapter(modelName: string) {
       }
 
       return Array.from(groupsMap.values());
+    },
+    aggregate: async (args: any) => {
+      const where = buildWhere(schemaObj, args?.where);
+      const res = await db.select().from(schemaObj).where(where);
+      const items = res.map(convertDates);
+      
+      const result: any = {};
+      if (args._sum) {
+        result._sum = {};
+        for (const sumField of Object.keys(args._sum)) {
+          let sumVal = 0n;
+          for (const item of items) {
+            const val = item[sumField];
+            if (val !== undefined && val !== null) {
+              sumVal += BigInt(val.toString());
+            }
+          }
+          result._sum[sumField] = sumVal;
+        }
+      }
+      if (args._count) {
+        result._count = items.length;
+      }
+      return result;
     }
   };
 }
+
 
 const prismaAdapter = {
   $transaction: async (queries: Promise<any>[]) => {
