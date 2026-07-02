@@ -5,17 +5,18 @@ services:
       dockerfile: Dockerfile
     container_name: clospol-gateway
     restart: unless-stopped
+    user: "root"
     ports:
       - "3000:3000"
     environment:
       # Redirect database storage inside the persistent storage volume
       - DATABASE_PATH=/app/storage/dev.db
       - DATABASE_URL=file:/app/storage/dev.db
-      
+
       # Next.js Server Configurations
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      
+
       # Optional: Override general environment variables here if needed
       # - NEXT_PUBLIC_APP_URL=http://localhost:3000
       # - MAX_UPLOAD_BYTES=5368709120
